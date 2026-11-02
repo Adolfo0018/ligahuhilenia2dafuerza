@@ -30,7 +30,7 @@ export function TarjetaPartido({ partido, etiqueta }: { partido: Partido; etique
       <span className="partido-meta">
         <span className="partido-cuando">
           {etiqueta && <strong>{etiqueta} · </strong>}
-          {fechaCorta(partido.fecha)}
+          {!partido.fecha && m ? 'Fecha no registrada' : fechaCorta(partido.fecha)}
           {partido.cancha && ` · ${partido.cancha}`}
         </span>
         <span className={`insignia insignia-${partido.estado}`}>{ESTADOS[partido.estado]}</span>
@@ -118,7 +118,7 @@ function ListaEventos({ eventos }: { eventos: Evento[] }) {
                 ⚽
               </span>
               <span>
-                {e.autogol ? 'Autogol a favor' : nombre(e.jugadorId)}
+                {e.autogol ? 'Autogol a favor' : e.jugadorId ? nombre(e.jugadorId) : 'Gol sin autor registrado'}
                 {e.tiempoExtra && ' (tiempo extra)'}
                 {e.asistenciaId && <span className="sub">Asistencia: {nombre(e.asistenciaId)}</span>}
               </span>

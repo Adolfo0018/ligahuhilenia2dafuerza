@@ -1,7 +1,7 @@
 # Documento funcional: App de liga de fútbol local (MVP)
 
 - **Estado:** Listo para estimación
-- **Versión:** 0.8
+- **Versión:** 0.9
 - **Fecha:** 2026-11-02 (v0.2: se resuelven P-001, P-002, P-003, P-007 y P-012; v0.3: se resuelven P-017 a P-021 y se adopta el estándar de la Liga MX; v0.4: alerta de captura faltante y se confirman SUP-001 y SUP-003; v0.5: final con tiempo extra y penales, y se validan todos los supuestos; v0.6: plazo de captura, sanción opcional y captura de la final por los delegados; v0.7: sanciones públicas y cierre de todas las preguntas menores con valores por defecto; v0.8: datos del jugador según el listín real: número opcional, posición y menor de edad, y cuerpo técnico del equipo)
 - **Solicitante / área:** Usuario solicitante (proyecto personal)
 - **Responsable de análisis:** Claude (asistente de levantamiento)
@@ -144,7 +144,8 @@ No se conoce (P-015).
 | RF-012 | El delegado debe poder dar de alta y editar a los jugadores de su equipo. Cada cambio queda pendiente hasta que el administrador lo aprueba. | Alta | ENT-01 | CA-006 | Confirmado |
 | RF-013 | El delegado debe poder capturar los goles (con asistencia opcional) y las tarjetas de su equipo en un partido ya jugado y aún no publicado. Si el jugador está suspendido, la app avisa pero permite guardar. | Alta | ENT-01, ENT-02 | CA-002, CA-008, CA-009, CA-011 | Confirmado |
 | RF-014 | El administrador debe poder crear competencias y torneos, inscribir equipos y asignarles delegados. | Alta | ENT-01 | CA-001 | Confirmado |
-| RF-015 | El administrador debe poder generar de forma automática el calendario de todos contra todos a una vuelta de un torneo. | Alta | ENT-01 | CA-010 | Confirmado |
+| RF-015 | ~~El administrador debe poder generar de forma automática el calendario de todos contra todos a una vuelta de un torneo.~~ Reemplazado por RF-029. | — | ENT-01, ENT-09 | CA-010 | Descartado (2026-11-02) |
+| RF-029 | El administrador debe poder subir una foto o imagen del calendario que entrega la liga, y el sistema debe leerla y proponer los partidos de cada jornada (equipos, local y visitante, y cancha si viene). Antes de guardar, el administrador revisa la propuesta y la corrige si hace falta. El sistema valida que cada equipo juegue una vez por jornada y que ninguna pareja se repita. | Alta | ENT-09 | CA-010 | Confirmado; la forma de leer la imagen queda por definir (P-024) |
 | RF-016 | El administrador debe poder crear, editar, aplazar y reprogramar partidos a mano. | Alta | ENT-01 | CA-010 | Confirmado |
 | RF-017 | El administrador debe poder revisar, corregir y publicar el resultado de un partido, y también capturar en lugar de un delegado. | Alta | ENT-01 | CA-002 | Confirmado |
 | RF-018 | El administrador debe poder registrar un resultado administrativo indicando el equipo responsable y el motivo. | Alta | ENT-01 | CA-007 | Confirmado |
@@ -315,6 +316,11 @@ No quedan preguntas abiertas. El 2026-11-02 el solicitante pidió no hacer más 
 | P-015 | No se necesita saber cómo llevan hoy los resultados. El torneo actual se carga a mano desde el panel |
 | P-016 | El marcador en vivo queda fuera del MVP |
 
+### Pendiente para la fase 3
+| ID | Pregunta | Por qué importa |
+|---|---|---|
+| P-024 | ¿Con qué servicio se lee la foto del calendario? Opción probable: un modelo de IA con visión (por ejemplo, la API de Claude) llamado desde una función de Netlify, para no exponer la clave en el navegador. Tiene un costo por imagen, aunque es pequeño | Define el costo y si se necesita una función en el servidor |
+
 ### Preguntas resueltas (2026-11-02)
 | ID | Respuesta |
 |---|---|
@@ -366,6 +372,7 @@ No quedan preguntas abiertas. El 2026-11-02 el solicitante pidió no hacer más 
 | ENT-05 | Respuestas del solicitante sobre los supuestos | — | 2026-11-02 | Confirma SUP-002, SUP-005 y SUP-006. Descarta SUP-004: la final se define con tiempo extra y penales |
 | ENT-06 | Respuestas del solicitante sobre P-022 y P-004 | — | 2026-11-02 | Los delegados capturan todo, incluida la final. Hay plazo de captura y la sanción es opcional |
 | ENT-07 | Respuestas del solicitante sobre P-004 y P-023 | — | 2026-11-02 | Las sanciones se ven en público y en el panel. Pide no hacer más preguntas sobre temas menores: el analista los decide con valores por defecto (sección 16) |
+| ENT-09 | Cambio de alcance de la fase 3 | — | 2026-11-02 | La fase 3 pasa de generador automático a leer la foto del calendario de la liga y generar los partidos |
 | ENT-08 | Datos reales de la liga | — | 2026-11-02 | Torneo "Ascenso 2026-2027", 16 equipos y calendario de 15 jornadas; listines de BODKA JR HUHI y ZORROS HUHI; "(M)" significa menor de edad |
 | F-04 | Listines de jugadores (Word y foto) y calendario visual (PDF) entregados por el solicitante | Tabla de jugadores y calendario | 2026-11-02 | Formato real del listín y del calendario |
 | F-03 | Criterios de la Liga MX para desempate, doble amarilla y columnas de la tabla | Desempate en la tabla general y conteo de tarjetas | Conocimiento general del analista | RN-002, RN-014 y RF-004. No se consultó el reglamento oficial (ver 20.2) |
@@ -387,11 +394,13 @@ Al terminar cada fase hay algo publicado en Netlify que se puede probar desde el
 |---|---|---|---|---|---|
 | **1. Vista pública con datos de prueba** | Proyecto React en Netlify. Partidos, Clasificación y Estadísticas con datos de ejemplo guardados en un archivo, y selector entre Liga y Copa. La tabla y las estadísticas ya se calculan a partir de los partidos | Ver y validar el diseño y los cálculos | Mediano | RF-001 a RF-009, RN-001, RN-002, RNF-001 | CA-001, CA-003, CA-004 |
 | **2. Firebase y panel del administrador** | Firestore con reglas, inicio de sesión y panel para administrar competencias, equipos, jugadores y partidos a mano. El administrador captura y publica resultados | Llevar la liga completa con un solo administrador | Grande | RF-011, RF-014, RF-016, RF-017, RN-008, RNF-002, RNF-004, RNF-005 | CA-002 |
-| **3. Generador de calendario** | Calendario de todos contra todos con descansos y edición posterior | Armar un torneo en minutos | Chico | RF-015, RN-012 | CA-010 |
+| **3. Calendario desde una foto** | El administrador sube la imagen del calendario de la liga; la app propone las jornadas, las valida y el administrador confirma antes de guardar. Reemplaza al generador automático | Cargar el calendario oficial en minutos, sin capturarlo a mano | Mediano | RF-029, RN-012 | CA-010 |
 | **4. Delegados** | Cuentas de delegado, planteles con aprobación, captura por equipo, bandeja "en revisión" del administrador, plazo de captura con alertas y sanción opcional | Repartir la captura entre los delegados | Mediano | RF-012, RF-013, RF-022, RF-024, RF-025, RN-006, RN-009, RN-013, RN-017 | CA-002, CA-006, CA-009, CA-013, CA-015 |
 | **5. Disciplina y resultados administrativos** | Suspensiones, lista de suspendidos, resultado administrativo 2-0 con motivo y partidos aplazados | Llevar las sanciones en la app | Mediano | RF-010, RF-018, RF-019, RN-007, RN-010 | CA-007, CA-008 |
 | **6. Liguilla** | Generación de las llaves, ida y vuelta, marcador global, desempate por posición, tiempo extra y penales en la final, y cuadro visual | Jugar la fase final | Mediano | RF-005, RF-020, RF-023, RN-003, RN-004, RN-005, RN-015 | CA-005, CA-014 |
 | **7. Salida a uso real** | Revisión de reglas, carga del torneo actual, nombre y logo de la liga, y prueba con una jornada real | Usarla con toda la liga | Chico | Todos | Todos |
+
+**Cambio del 2026-11-02:** la fase 3 ya no es un generador automático. La liga entrega su propio calendario como imagen (por ejemplo, el del Ascenso 2026-2027), así que es más útil leer esa imagen y generar los partidos a partir de ella. Para leer la imagen dentro de la app hace falta un servicio de reconocimiento de imágenes (P-024).
 
 **Nota:** la Copa no necesita una fase propia. Desde la fase 2 el modelo de datos soporta varias competencias, así que la Copa es otra competencia con su propia inscripción, que empieza cuando termina la Liga.
 

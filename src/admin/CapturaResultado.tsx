@@ -56,7 +56,7 @@ export function CapturaResultado({ partido, onListo }: { partido: Partido; onLis
   const m = marcador(borrador)
 
   async function publicar() {
-    if (goles.some((g) => !g.evento.jugadorId && !g.evento.autogol)) return fallar('Elige quién anotó cada gol.')
+    // Un gol puede quedar sin autor (por ejemplo, un resultado anterior del que solo se conoce el marcador).
     if (tarjetas.some((t) => !t.evento.jugadorId)) return fallar('Elige a qué jugador es cada tarjeta.')
     const eventos: Evento[] = [...goles.map((g) => g.evento), ...normalizarTarjetas(tarjetas.map((t) => t.evento))]
     const ok = await guardar(
@@ -167,7 +167,7 @@ function ColumnaEquipo({ equipoId, goles, tarjetas, onGoles, onTarjetas }: Props
                 )
               }
             >
-              <option value="">¿Quién anotó?</option>
+              <option value="">Sin autor registrado</option>
               {opciones}
               <option value={AUTOGOL}>Autogol a favor</option>
             </select>
