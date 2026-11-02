@@ -1,0 +1,10 @@
+# Netlify toma la versión de Node de .nvmrc.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Todas las rutas las resuelve la app de React.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

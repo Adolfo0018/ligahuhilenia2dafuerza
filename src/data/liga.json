@@ -1,0 +1,14 @@
+{
+  "nombre": "Liga Huhileña",
+  "division": "Segunda Fuerza",
+  "logo": "/img/logo.jpg",
+  "colores": {
+    "primario": "#6c2665",
+    "textoSobrePrimario": "#ffffff",
+    "acento": "#d5a529",
+    "fondo": "#f4f2f5",
+    "superficie": "#ffffff",
+    "texto": "#161b1f",
+    "textoSuave": "#5f5a66"
+  }
+}

@@ -1,0 +1,962 @@
+/* Los colores reales vienen de src/data/liga.json (ver main.tsx). Estos son solo valores de respaldo. */
+:root {
+  --color-primario: #6c2665;
+  --color-texto-sobre-primario: #ffffff;
+  --color-acento: #d5a529;
+  --color-fondo: #f4f2f5;
+  --color-superficie: #ffffff;
+  --color-texto: #161b1f;
+  --color-texto-suave: #5f5a66;
+
+  --color-borde: color-mix(in srgb, var(--color-texto) 11%, transparent);
+  --color-primario-tenue: color-mix(in srgb, var(--color-primario) 7%, var(--color-superficie));
+  --color-acento-tenue: color-mix(in srgb, var(--color-acento) 22%, var(--color-superficie));
+  --color-gano: #1e8e4e;
+  --color-empato: #8a94a3;
+  --color-perdio: #c0392b;
+  --color-amarilla: #f4c430;
+  --color-roja: #d62828;
+
+  --fuente: 'Barlow', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --fuente-numeros: 'Barlow Condensed', 'Barlow', system-ui, sans-serif;
+
+  --sombra-1: 0 1px 2px rgb(20 32 46 / 0.06), 0 4px 14px rgb(20 32 46 / 0.06);
+  --anillo-foco: 0 0 0 3px color-mix(in srgb, var(--color-primario) 30%, transparent);
+
+  --radio: 16px;
+  --radio-chico: 10px;
+  --ancho-max: 960px;
+
+  font-family: var(--fuente);
+  color: var(--color-texto);
+  background: var(--color-fondo);
+  -webkit-font-smoothing: antialiased;
+  /* Evita que iOS agrande el texto al girar el celular. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-fondo);
+  line-height: 1.45;
+  /* Ningún elemento puede provocar desplazamiento horizontal. `clip` (no `hidden`) mantiene la barra sticky. */
+  overflow-x: clip;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  /* Tocar rápido un botón no debe interpretarse como doble toque para hacer zoom. */
+  touch-action: manipulation;
+}
+
+button:focus-visible {
+  outline: none;
+  box-shadow: var(--anillo-foco);
+}
+
+abbr {
+  text-decoration: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.texto-suave {
+  color: var(--color-texto-suave);
+}
+
+/* ---------- Encabezado ---------- */
+
+.encabezado {
+  background: var(--color-primario);
+  color: var(--color-texto-sobre-primario);
+  padding: max(18px, env(safe-area-inset-top)) 16px 16px;
+}
+
+.encabezado-interior {
+  max-width: var(--ancho-max);
+  margin: 0 auto;
+  display: grid;
+  gap: 14px;
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.marca-logo {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: var(--color-acento);
+  color: var(--color-primario);
+  display: grid;
+  place-items: center;
+  font-family: var(--fuente-numeros);
+  font-weight: 800;
+  font-size: 1.3rem;
+}
+
+/* El logo tiene fondo blanco; se muestra completo dentro de un cuadro blanco. */
+.marca-logo-imagen {
+  width: 60px;
+  height: 60px;
+  padding: 3px;
+  background: #fff;
+  object-fit: contain;
+}
+
+.marca-texto {
+  min-width: 0;
+}
+
+.marca-liga {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.marca-torneo {
+  font-family: var(--fuente-numeros);
+  font-size: 1.65rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.selector-torneo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.selector-torneo button {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border: 1px solid color-mix(in srgb, var(--color-texto-sobre-primario) 35%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.selector-torneo button[aria-pressed='true'] {
+  background: var(--color-texto-sobre-primario);
+  color: var(--color-primario);
+  border-color: transparent;
+}
+
+.selector-estado {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+/* ---------- Navegación entre secciones ---------- */
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--color-superficie);
+  border-bottom: 1px solid var(--color-borde);
+}
+
+.nav-interior {
+  max-width: var(--ancho-max);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.nav button {
+  padding: 14px 4px 11px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--color-texto-suave);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.nav button[aria-current='page'] {
+  color: var(--color-primario);
+  border-bottom-color: var(--color-primario);
+}
+
+.contenido {
+  max-width: var(--ancho-max);
+  margin: 0 auto;
+  padding: 16px 16px 24px;
+  display: grid;
+  gap: 14px;
+  /* Evita que una tabla ancha estire la cuadrícula más allá de la pantalla. */
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.bloque {
+  display: grid;
+  gap: 10px;
+}
+
+.titulo-seccion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  font-family: var(--fuente-numeros);
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.titulo-seccion small {
+  font-family: var(--fuente);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-texto-suave);
+}
+
+.tarjeta {
+  background: var(--color-superficie);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra-1);
+}
+
+.vacio,
+.aviso {
+  padding: 14px 16px;
+  border-radius: var(--radio);
+  background: var(--color-superficie);
+  color: var(--color-texto-suave);
+  box-shadow: var(--sombra-1);
+}
+
+.leyenda {
+  display: grid;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--color-texto-suave);
+}
+
+.boton-texto {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  border-top: 1px solid var(--color-borde);
+  border-radius: 0 0 var(--radio) var(--radio);
+  background: none;
+  color: var(--color-primario);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ---------- Control segmentado ---------- */
+
+.segmentado {
+  justify-self: start;
+  display: inline-flex;
+  gap: 2px;
+  max-width: 100%;
+  padding: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-texto) 7%, transparent);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.segmentado-ajustable {
+  flex-wrap: wrap;
+  border-radius: 18px;
+}
+
+.segmentado button {
+  flex: none;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--color-texto-suave);
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.segmentado button[aria-pressed='true'] {
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  box-shadow: var(--sombra-1);
+}
+
+/* ---------- Escudo y racha ---------- */
+
+.escudo {
+  --escudo: #555;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--escudo);
+  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.28);
+  color: #fff;
+  font-family: var(--fuente-numeros);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.escudo-chico {
+  width: 24px;
+  height: 24px;
+  font-size: 0.55rem;
+}
+
+.racha {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.racha span {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 800;
+}
+
+.racha-G {
+  background: var(--color-gano);
+}
+
+.racha-E {
+  background: var(--color-empato);
+}
+
+.racha-P {
+  background: var(--color-perdio);
+}
+
+.icono-tarjeta {
+  flex: none;
+  display: inline-block;
+  width: 10px;
+  height: 14px;
+  border-radius: 2px;
+  vertical-align: middle;
+}
+
+.icono-amarilla {
+  background: var(--color-amarilla);
+}
+
+.icono-roja {
+  background: var(--color-roja);
+}
+
+/* ---------- Partidos ---------- */
+
+.jornadas {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.jornadas-lista {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 6px;
+  padding: 3px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.jornada-chip,
+.flecha {
+  flex: none;
+  height: 40px;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-chico);
+  background: var(--color-superficie);
+  cursor: pointer;
+}
+
+.jornada-chip {
+  min-width: 44px;
+  color: var(--color-texto-suave);
+  font-family: var(--fuente-numeros);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.jornada-chip[aria-pressed='true'] {
+  background: var(--color-primario);
+  border-color: transparent;
+  color: var(--color-texto-sobre-primario);
+}
+
+.flecha {
+  width: 36px;
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.flecha:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.lista-partidos {
+  display: grid;
+  gap: 10px;
+}
+
+@media (min-width: 680px) {
+  .lista-partidos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+.partido {
+  background: var(--color-superficie);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra-1);
+  overflow: hidden;
+}
+
+.partido-cuerpo {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  background: none;
+  text-align: left;
+}
+
+button.partido-cuerpo {
+  cursor: pointer;
+}
+
+button.partido-cuerpo:hover {
+  background: var(--color-primario-tenue);
+}
+
+.partido-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--color-texto-suave);
+}
+
+.partido-cuando {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fila-equipo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+}
+
+.fila-equipo.pierde {
+  color: var(--color-texto-suave);
+  font-weight: 500;
+}
+
+.fila-nombre {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fila-goles {
+  min-width: 1.2em;
+  text-align: right;
+  font-family: var(--fuente-numeros);
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.partido-nota {
+  font-size: 0.8rem;
+  color: var(--color-texto-suave);
+}
+
+.partido-ver {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-primario);
+}
+
+.insignia {
+  flex: none;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-texto) 7%, transparent);
+  color: var(--color-texto-suave);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.insignia-finalizado {
+  background: var(--color-primario-tenue);
+  color: var(--color-primario);
+}
+
+.insignia-administrativo {
+  background: var(--color-acento-tenue);
+  color: #7a5300;
+}
+
+.insignia-aplazado {
+  background: #fdecea;
+  color: #a1281e;
+}
+
+.insignia-revision {
+  background: #e8f1fc;
+  color: #1d5fa8;
+}
+
+.partido-detalle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--color-borde);
+  font-size: 0.86rem;
+}
+
+.partido-detalle-texto {
+  display: block;
+  color: var(--color-texto-suave);
+}
+
+.detalle-equipo {
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.eventos {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.eventos li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.eventos .icono-tarjeta {
+  margin-top: 3px;
+}
+
+.icono-gol {
+  flex: none;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.sub {
+  display: block;
+  font-size: 0.76rem;
+  color: var(--color-texto-suave);
+}
+
+.nota-descanso {
+  font-size: 0.86rem;
+  color: var(--color-texto-suave);
+}
+
+/* ---------- Tablas ---------- */
+
+.tabla-envoltura {
+  overflow-x: auto;
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabla th,
+.tabla td {
+  padding: 10px 7px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.tabla thead th {
+  border-bottom: 1px solid var(--color-borde);
+  color: var(--color-texto-suave);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.tabla tbody tr + tr > * {
+  border-top: 1px solid var(--color-borde);
+}
+
+/* El lugar y el equipo se quedan fijos al desplazar la tabla hacia los lados. */
+.tabla .col-lugar,
+.tabla .col-equipo {
+  position: sticky;
+  z-index: 1;
+  background: var(--color-superficie);
+}
+
+.tabla .col-lugar {
+  left: 0;
+  width: 36px;
+  padding-left: 12px;
+  font-family: var(--fuente-numeros);
+  font-weight: 700;
+}
+
+.tabla .col-equipo {
+  left: 36px;
+  max-width: 190px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.tabla-simple .col-equipo,
+.tabla:not(:has(.col-lugar)) .col-equipo {
+  left: 0;
+  padding-left: 14px;
+}
+
+.equipo-celda {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.equipo-celda > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tabla .col-pts {
+  font-family: var(--fuente-numeros);
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.zona-liguilla .col-lugar {
+  box-shadow: inset 4px 0 0 var(--color-acento);
+}
+
+.corte-liguilla > * {
+  border-bottom: 2px dashed color-mix(in srgb, var(--color-acento) 70%, transparent);
+}
+
+.muestra-liguilla {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 4px;
+  border-radius: 2px;
+  background: var(--color-acento);
+  vertical-align: baseline;
+}
+
+/* En celular la racha se omite y el nombre se recorta para que quepan todas las columnas, hasta Pts. */
+@media (max-width: 559px) {
+  .col-racha {
+    display: none;
+  }
+
+  .tabla th,
+  .tabla td {
+    padding: 9px 4px;
+  }
+
+  .tabla .col-lugar {
+    width: 28px;
+    padding-left: 8px;
+  }
+
+  .tabla .col-equipo {
+    left: 28px;
+  }
+
+  .tabla .equipo-celda {
+    max-width: 112px;
+  }
+}
+
+/* ---------- Liguilla ---------- */
+
+.campeon {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radio);
+  background: linear-gradient(135deg, var(--color-acento-tenue), var(--color-superficie));
+  box-shadow: var(--sombra-1);
+}
+
+.campeon-copa {
+  font-size: 1.8rem;
+}
+
+.campeon-titulo {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-texto-suave);
+}
+
+.campeon-nombre {
+  font-family: var(--fuente-numeros);
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.cuadro {
+  display: grid;
+  gap: 18px;
+}
+
+.cuadro-proyeccion {
+  gap: 10px;
+}
+
+@media (min-width: 680px) {
+  .cuadro-proyeccion {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 900px) {
+  .cuadro:not(.cuadro-proyeccion) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: center;
+  }
+}
+
+.cuadro-ronda {
+  display: grid;
+  gap: 10px;
+}
+
+.cuadro-titulo {
+  color: var(--color-texto-suave);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.llave {
+  padding: 8px 10px;
+  border-radius: var(--radio-chico);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+}
+
+.llave-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.llave-tabla th,
+.llave-tabla td {
+  padding: 4px 2px;
+  text-align: center;
+}
+
+.llave-tabla thead th {
+  color: var(--color-texto-suave);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.col-llave-lugar {
+  width: 24px;
+}
+
+.col-llave-goles {
+  width: 46px;
+}
+
+.llave-tabla .llave-lugar {
+  color: var(--color-texto-suave);
+  font-family: var(--fuente-numeros);
+  font-weight: 700;
+}
+
+.llave-tabla .llave-equipo {
+  overflow: hidden;
+  text-align: left;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.llave-tabla .llave-global {
+  font-weight: 800;
+}
+
+.llave-tabla .avanza .llave-equipo {
+  font-weight: 800;
+}
+
+.llave-tabla .eliminado {
+  color: var(--color-texto-suave);
+}
+
+.llave-nota {
+  margin-top: 4px;
+  font-size: 0.76rem;
+  color: var(--color-texto-suave);
+}
+
+/* ---------- Rankings ---------- */
+
+.ranking {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ranking li {
+  display: grid;
+  grid-template-columns: 24px auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+}
+
+.ranking li + li {
+  border-top: 1px solid var(--color-borde);
+}
+
+.ranking-lugar {
+  text-align: center;
+  color: var(--color-texto-suave);
+  font-family: var(--fuente-numeros);
+  font-weight: 700;
+}
+
+.ranking .icono-tarjeta {
+  justify-self: center;
+}
+
+.ranking-quien {
+  min-width: 0;
+}
+
+.ranking-quien strong,
+.ranking-quien span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ranking-quien span {
+  font-size: 0.8rem;
+  color: var(--color-texto-suave);
+  white-space: normal;
+}
+
+.ranking-valor {
+  font-family: var(--fuente-numeros);
+  font-size: 1.45rem;
+  font-weight: 700;
+}
+
+.ranking li:first-child .ranking-valor {
+  color: var(--color-primario);
+}
+
+.ranking-texto {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-texto-suave);
+  text-align: right;
+}
+
+/* ---------- Pie ---------- */
+
+.pie {
+  max-width: var(--ancho-max);
+  margin: 0 auto;
+  padding: 8px 16px max(28px, env(safe-area-inset-bottom));
+  color: var(--color-texto-suave);
+  font-size: 0.78rem;
+  text-align: center;
+}
