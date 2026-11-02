@@ -1,0 +1,599 @@
+/* Estilos del panel del administrador. Se cargan solo en /admin; reutiliza las variables de styles.css. */
+
+/* En iPhone, un campo con letra menor a 16 px hace zoom al tocarlo y la página queda ampliada. */
+input,
+select,
+textarea {
+  font: inherit;
+  font-size: max(16px, 1rem);
+}
+
+code {
+  font-size: 0.85em;
+}
+
+/* ---------- Botones ---------- */
+
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radio-chico);
+  background: var(--color-primario);
+  color: var(--color-texto-sobre-primario);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.boton:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.boton-secundario {
+  background: var(--color-superficie);
+  border-color: var(--color-borde);
+  color: var(--color-texto);
+}
+
+.boton-peligro {
+  background: var(--color-perdio);
+}
+
+.boton-peligro-texto {
+  background: none;
+  border-color: transparent;
+  color: var(--color-perdio);
+}
+
+.boton-chico {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 0.88rem;
+}
+
+.boton-ancho {
+  width: 100%;
+}
+
+.boton-enlace {
+  padding: 4px 6px;
+  border: 0;
+  background: none;
+  color: var(--color-primario);
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.boton-enlace.boton-peligro-texto {
+  color: var(--color-perdio);
+}
+
+.boton-quitar {
+  flex: none;
+  width: 36px;
+  height: 40px;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-chico);
+  background: var(--color-superficie);
+  color: var(--color-texto-suave);
+  cursor: pointer;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---------- Formularios ---------- */
+
+.formulario {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.formulario-titulo {
+  font-size: 1.05rem;
+}
+
+.campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+
+.campo {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.campo > span:first-child {
+  color: var(--color-texto-suave);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.campo input,
+.campo select,
+.captura-renglon select {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--color-texto) 20%, transparent);
+  border-radius: var(--radio-chico);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+}
+
+.campo input:focus-visible,
+.campo select:focus-visible,
+.captura-renglon select:focus-visible {
+  outline: none;
+  border-color: var(--color-primario);
+  box-shadow: var(--anillo-foco);
+}
+
+.campo input:disabled,
+.campo select:disabled {
+  background: var(--color-fondo);
+  color: var(--color-texto-suave);
+}
+
+.campo-color {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.campo-color input[type='color'] {
+  width: 56px;
+  padding: 3px;
+}
+
+.nota {
+  color: var(--color-texto-suave);
+  font-size: 0.84rem;
+}
+
+.mensaje {
+  padding: 10px 12px;
+  border-radius: var(--radio-chico);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.mensaje-info {
+  background: var(--color-primario-tenue);
+  color: var(--color-primario);
+}
+
+.mensaje-ok {
+  background: #e7f6ec;
+  color: #1b6e3c;
+}
+
+.mensaje-error {
+  background: #fdecea;
+  color: #a1281e;
+}
+
+/* ---------- Acceso ---------- */
+
+.acceso {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+}
+
+.acceso-tarjeta {
+  width: min(100%, 400px);
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+  border-radius: var(--radio);
+  background: var(--color-superficie);
+  box-shadow: var(--sombra-1);
+}
+
+.acceso-marca {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.acceso-logo {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  object-fit: contain;
+  display: grid;
+  place-items: center;
+  background: var(--color-acento);
+  font-family: var(--fuente-numeros);
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+img.acceso-logo {
+  background: #fff;
+}
+
+.acceso-nombre {
+  font-family: var(--fuente-numeros);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.acceso h2 {
+  font-size: 1.2rem;
+}
+
+.formulario-acceso {
+  display: grid;
+  gap: 12px;
+}
+
+.acceso-volver {
+  color: var(--color-texto-suave);
+  font-size: 0.86rem;
+}
+
+/* ---------- Panel ---------- */
+
+.admin-cuenta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  font-size: 0.86rem;
+}
+
+.admin-correo {
+  opacity: 0.8;
+  overflow-wrap: anywhere;
+}
+
+.admin-cuenta a,
+.admin-cuenta button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.admin-selector {
+  flex: 1 1 240px;
+}
+
+.admin-seccion {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-titulo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.lista-admin {
+  display: grid;
+  gap: 10px;
+}
+
+@media (min-width: 680px) {
+  .lista-admin {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  /* Un formulario abierto dentro de la lista ocupa todo el ancho. */
+  .lista-admin > .formulario,
+  .lista-admin > .tarjeta-equipo:has(.plantel) {
+    grid-column: 1 / -1;
+  }
+}
+
+.fila-admin {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.fila-admin-texto {
+  flex: 1 1 140px;
+  min-width: 0;
+  display: grid;
+}
+
+.fila-admin-texto span {
+  color: var(--color-texto-suave);
+  font-size: 0.82rem;
+}
+
+.tarjeta-equipo,
+.tarjeta-partido-admin {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.plantel {
+  display: grid;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-borde);
+}
+
+.lista-jugadores {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lista-jugadores > li + li {
+  border-top: 1px solid var(--color-borde);
+}
+
+.fila-jugador {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+
+.numero {
+  flex: none;
+  width: 30px;
+  font-family: var(--fuente-numeros);
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--color-texto-suave);
+}
+
+.fila-jugador-nombre {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fila-jugador-posicion {
+  display: block;
+  color: var(--color-texto-suave);
+  font-size: 0.78rem;
+}
+
+.form-jugador {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  align-items: end;
+  gap: 8px 10px;
+  padding: 6px 0;
+}
+
+.form-jugador .campo-posicion,
+.form-jugador .casilla-menor,
+.form-jugador .acciones,
+.form-jugador .mensaje {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 560px) {
+  .form-jugador {
+    grid-template-columns: 80px minmax(0, 1fr) 150px auto;
+  }
+
+  .form-jugador .campo-posicion,
+  .form-jugador .acciones {
+    grid-column: auto;
+  }
+}
+
+.campo textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--color-texto) 20%, transparent);
+  border-radius: var(--radio-chico);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  resize: vertical;
+}
+
+.pegar-lista {
+  display: grid;
+  gap: 10px;
+}
+
+.casilla {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.casilla input {
+  width: 18px;
+  height: 18px;
+}
+
+.vista-lista {
+  max-height: 260px;
+  margin: 0;
+  padding: 0 10px;
+  overflow-y: auto;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-chico);
+  list-style: none;
+}
+
+.vista-lista li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 0;
+}
+
+.vista-lista li + li {
+  border-top: 1px solid var(--color-borde);
+}
+
+.vista-lista .fila-jugador-posicion {
+  flex: none;
+}
+
+.vista-lista .con-problema {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+.vista-lista .con-problema .fila-jugador-posicion {
+  text-decoration: none;
+  color: var(--color-perdio);
+}
+
+.plantel > .boton {
+  justify-self: start;
+}
+
+.cuerpo-tecnico {
+  display: grid;
+  gap: 6px;
+}
+
+.lista-cuerpo {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.92rem;
+}
+
+.lista-cuerpo span {
+  display: inline-block;
+  min-width: 130px;
+  color: var(--color-texto-suave);
+  font-size: 0.82rem;
+}
+
+.formulario-cuerpo {
+  padding: 0;
+}
+
+.resumen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-texto-suave);
+}
+
+.resumen strong {
+  display: block;
+  color: var(--color-texto);
+  font-family: var(--fuente-numeros);
+  font-size: 1.5rem;
+}
+
+.zona-peligro {
+  border: 1px solid color-mix(in srgb, var(--color-perdio) 30%, transparent);
+}
+
+/* ---------- Captura del resultado ---------- */
+
+.captura {
+  grid-column: 1 / -1;
+}
+
+.captura-marcador {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  font-family: var(--fuente-numeros);
+  font-size: 2.2rem;
+  font-weight: 800;
+}
+
+.captura-equipos {
+  display: grid;
+  gap: 16px;
+}
+
+@media (min-width: 680px) {
+  .captura-equipos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.captura-columna {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.captura-equipo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+}
+
+.captura-subtitulo {
+  margin-top: 4px;
+  color: var(--color-texto-suave);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.captura-renglon {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+
+.captura-renglon select {
+  flex: 1 1 0;
+}
+
+.captura-renglon .captura-tipo {
+  flex: 0 0 120px;
+}
+
+.captura-columna > .boton {
+  justify-self: start;
+}

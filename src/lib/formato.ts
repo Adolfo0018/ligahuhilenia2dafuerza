@@ -1,4 +1,38 @@
-import type { Liga, Torneo } from '../types'
+import type { Jugador, Liga, Posicion, RolCuerpoTecnico, Torneo } from '../types'
+
+export const ROLES_CUERPO_TECNICO: Record<RolCuerpoTecnico, string> = {
+  tecnico: 'Director técnico',
+  auxiliar: 'Auxiliar',
+  medico: 'Médico',
+}
+
+/** Lugares del cuerpo técnico en el listín de la liga. */
+export const LUGARES_CUERPO_TECNICO: RolCuerpoTecnico[] = ['tecnico', 'auxiliar', 'auxiliar', 'medico']
+
+export const POSICIONES: Record<Posicion, string> = {
+  portero: 'Portero',
+  defensa: 'Defensa',
+  carrilero: 'Carrilero',
+  medio: 'Medio',
+  delantero: 'Delantero',
+}
+
+/** "9 · Juan Pérez", o solo el nombre si no tiene número. */
+export function etiquetaJugador(j: Jugador): string {
+  return j.numero === undefined ? j.nombre : `${j.numero} · ${j.nombre}`
+}
+
+const ORDEN_POSICION = Object.keys(POSICIONES)
+
+/** Por número de camiseta; los que no tienen número van al final, por posición (como en el listín) y nombre. */
+export function porNumero(a: Jugador, b: Jugador): number {
+  const posicion = (j: Jugador) => (j.posicion ? ORDEN_POSICION.indexOf(j.posicion) : ORDEN_POSICION.length)
+  return (
+    (a.numero ?? Infinity) - (b.numero ?? Infinity) ||
+    posicion(a) - posicion(b) ||
+    a.nombre.localeCompare(b.nombre)
+  )
+}
 
 const DIA = new Intl.DateTimeFormat('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })
 const HORA = new Intl.DateTimeFormat('es-MX', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })

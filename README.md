@@ -11,6 +11,30 @@ App web para seguir la liga: **Partidos**, **Clasificación** y **Estadísticas*
 
 La tabla, la liguilla y las estadísticas ya se calculan a partir de los partidos (`src/lib/`). En la fase 2 los datos vendrán de Firestore.
 
+**Fase 2 — Firebase y panel del administrador** (en `/admin`): torneos, equipos, jugadores, partidos y captura de resultados. Mientras `src/lib/firebase.ts` no tenga la configuración del proyecto, el sitio sigue mostrando los datos de ejemplo.
+
+## Firebase
+
+| Colección | Qué guarda | Quién escribe |
+|---|---|---|
+| `torneos` | Un documento por torneo con sus equipos, jugadores, partidos y resultados | Solo el administrador; todos pueden leer |
+| `usuarios` | Un documento por cuenta con permisos, con el **UID** de Authentication como id y el campo `rol` | Solo a mano desde la consola |
+
+### Publicar las reglas
+
+1. Consola de Firebase → **Firestore → Reglas**.
+2. Pega el contenido de [firestore.rules](firestore.rules) y da clic en **Publicar**.
+
+### Dar de alta al administrador
+
+1. **Authentication → Usuarios → Agregar usuario**: correo y contraseña. Copia el **UID** que aparece en la lista.
+2. **Firestore → Datos → Iniciar colección**:
+   - ID de la colección: `usuarios`
+   - ID del documento: el **UID** copiado
+   - Campo `rol` (string) con el valor `admin`
+
+Para quitarle el acceso, borra su documento en `usuarios`.
+
 ## Cómo correrla
 
 ```bash

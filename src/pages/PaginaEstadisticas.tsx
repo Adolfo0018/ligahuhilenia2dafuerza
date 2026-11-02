@@ -72,7 +72,8 @@ function Ranking({ filas, unidad }: { filas: FilaJugador[]; unidad: string }) {
               <span className="ranking-quien">
                 <strong>{f.jugador.nombre}</strong>
                 <span>
-                  {eq.nombre} · #{f.jugador.numero}
+                  {eq.nombre}
+                  {f.jugador.numero !== undefined && ` · #${f.jugador.numero}`}
                 </span>
               </span>
               <span className="ranking-valor" aria-label={`${f.valor} ${unidad}`}>

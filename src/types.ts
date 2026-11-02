@@ -18,6 +18,13 @@ export interface Liga {
 export type TipoCompetencia = 'liga' | 'copa'
 export type EstadoTorneo = 'regular' | 'liguilla' | 'terminado'
 
+export type RolCuerpoTecnico = 'tecnico' | 'auxiliar' | 'medico'
+
+export interface MiembroCuerpoTecnico {
+  rol: RolCuerpoTecnico
+  nombre: string
+}
+
 export interface Equipo {
   id: string
   nombre: string
@@ -25,13 +32,21 @@ export interface Equipo {
   corto: string
   /** Color del escudo. */
   color: string
+  /** Como en el listín: director técnico, hasta dos auxiliares y médico. */
+  cuerpoTecnico?: MiembroCuerpoTecnico[]
 }
+
+export type Posicion = 'portero' | 'defensa' | 'carrilero' | 'medio' | 'delantero'
 
 export interface Jugador {
   id: string
   equipoId: string
   nombre: string
-  numero: number
+  /** Opcional: en el listín de la liga el número de camiseta se anota en cada partido. */
+  numero?: number
+  posicion?: Posicion
+  /** Menor de edad; en el listín se marca con "(M)". Solo se muestra en el panel del administrador. */
+  menor?: boolean
 }
 
 /** Solo `finalizado` y `administrativo` están publicados y cuentan para la tabla y las estadísticas (RN-008). */
@@ -100,4 +115,6 @@ export interface Torneo {
   partidos: Partido[]
   suspensiones: Suspension[]
   sanciones: Sancion[]
+  /** Milisegundos; lo pone el servidor al crear el torneo. */
+  creadoEn?: number
 }

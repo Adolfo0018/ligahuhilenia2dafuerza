@@ -1,0 +1,48 @@
+rules_version = '2';
+
+// Reglas de seguridad de Firestore para la liga.
+// Se publican en la consola de Firebase (Firestore → Reglas) o con `npx firebase deploy --only firestore:rules`.
+// Si cambias la forma de un torneo en src/types.ts, actualiza torneoValido() aquí.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Cuentas con permisos: un documento por usuario de Authentication, con el UID como id.
+    // Se dan de alta a mano en la consola; nadie puede escribirlos desde la app.
+    function esAdmin() {
+      return request.auth != null
+        && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'admin';
+    }
+
+    match /usuarios/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // Un documento por torneo con sus equipos, jugadores y partidos. Cualquiera lo consulta;
+    // solo el administrador lo modifica (RNF-002).
+    match /torneos/{torneoId} {
+      allow read: if true;
+      allow create: if esAdmin()
+        && torneoValido(request.resource.data)
+        && request.resource.data.creadoEn == request.time;
+      allow update: if esAdmin()
+        && torneoValido(request.resource.data)
+        && request.resource.data.creadoEn == resource.data.creadoEn;
+      allow delete: if esAdmin();
+    }
+
+    function torneoValido(t) {
+      return t.keys().hasOnly(['tipo', 'nombre', 'estado', 'equipos', 'jugadores', 'partidos', 'suspensiones', 'sanciones', 'creadoEn', 'actualizadoEn'])
+        && t.keys().hasAll(['tipo', 'nombre', 'estado', 'equipos', 'jugadores', 'partidos', 'suspensiones', 'sanciones', 'creadoEn', 'actualizadoEn'])
+        && t.tipo in ['liga', 'copa']
+        && t.estado in ['regular', 'liguilla', 'terminado']
+        && t.nombre is string && t.nombre.size() > 0 && t.nombre.size() <= 40
+        && t.equipos is list && t.equipos.size() <= 30
+        && t.jugadores is list && t.jugadores.size() <= 900
+        && t.partidos is list && t.partidos.size() <= 500
+        && t.suspensiones is list
+        && t.sanciones is list
+        && t.actualizadoEn == request.time;
+    }
+  }
+}

@@ -1,8 +1,8 @@
 # Documento funcional: App de liga de fútbol local (MVP)
 
 - **Estado:** Listo para estimación
-- **Versión:** 0.7
-- **Fecha:** 2026-11-02 (v0.2: se resuelven P-001, P-002, P-003, P-007 y P-012; v0.3: se resuelven P-017 a P-021 y se adopta el estándar de la Liga MX; v0.4: alerta de captura faltante y se confirman SUP-001 y SUP-003; v0.5: final con tiempo extra y penales, y se validan todos los supuestos; v0.6: plazo de captura, sanción opcional y captura de la final por los delegados; v0.7: sanciones públicas y cierre de todas las preguntas menores con valores por defecto)
+- **Versión:** 0.8
+- **Fecha:** 2026-11-02 (v0.2: se resuelven P-001, P-002, P-003, P-007 y P-012; v0.3: se resuelven P-017 a P-021 y se adopta el estándar de la Liga MX; v0.4: alerta de captura faltante y se confirman SUP-001 y SUP-003; v0.5: final con tiempo extra y penales, y se validan todos los supuestos; v0.6: plazo de captura, sanción opcional y captura de la final por los delegados; v0.7: sanciones públicas y cierre de todas las preguntas menores con valores por defecto; v0.8: datos del jugador según el listín real: número opcional, posición y menor de edad, y cuerpo técnico del equipo)
 - **Solicitante / área:** Usuario solicitante (proyecto personal)
 - **Responsable de análisis:** Claude (asistente de levantamiento)
 - **Fuentes consultadas:** ver sección 20
@@ -44,6 +44,7 @@ Todos los datos de esta tabla siguen vigentes.
 | Captura faltante | Cada delegado tiene un plazo para capturar y, si no lo cumple, la app alerta al administrador. El administrador puede registrar una sanción, pero la app no bloquea nada | Confirmado por el usuario | ENT-04, ENT-06 |
 | Captura de la final | Cada delegado captura todo lo de su equipo, incluidos el tiempo extra y los penales. El administrador solo verifica y aprueba | Confirmado por el usuario | ENT-06 |
 | Acceso | La consulta es pública y no requiere iniciar sesión. Cada equipo tiene un solo delegado | Confirmado por el usuario | ENT-04 |
+| Datos del jugador | El listín de la liga trae nombre completo y, a veces, posición. El número de camiseta se anota en cada partido, así que en la app es opcional. Los menores de edad se marcan con "(M)" | Confirmado por el usuario | ENT-08, F-04 |
 | Empate en el global | Avanza el equipo mejor colocado en la fase regular, excepto en la final: ahí se juega tiempo extra y, si sigue el empate, penales | Confirmado por el usuario | ENT-01, ENT-05 |
 | Jugadores entre torneos | Un jugador puede cambiar de equipo de un torneo a otro, pero dentro del mismo torneo solo juega en un equipo | Confirmado por el usuario | ENT-05 |
 | Captura del partido | Cada delegado captura los goles, las asistencias y las tarjetas **de su propio equipo**. El marcador sale de sumar las dos capturas y el administrador lo revisa antes de publicarlo | Confirmado por el usuario | ENT-01 |
@@ -154,6 +155,9 @@ No se conoce (P-015).
 | RF-023 | En la vuelta de la final, cada delegado debe poder capturar los goles del tiempo extra de su equipo y cuántos penales anotó su equipo en la tanda. El administrador los verifica y aprueba. | Alta | ENT-05, ENT-06 | CA-014 | Confirmado |
 | RF-024 | El administrador debe poder registrar una sanción a un equipo por capturar fuera de plazo, con una descripción libre. La sanción queda registrada y se ve en el panel y en la vista pública, en Estadísticas junto a los suspendidos. No cambia la tabla ni bloquea al delegado. | Media | ENT-06, ENT-07 | CA-015 | Confirmado |
 | RF-025 | El administrador debe poder configurar el plazo de captura de cada torneo. Por defecto es de 24 horas después de la hora del partido. | Media | ENT-06, decisión por defecto (P-004) | CA-013 | Confirmado |
+| RF-026 | El administrador debe poder pegar el plantel completo de un equipo (un jugador por renglón o la tabla del listín copiada de Word). La app reconoce la posición y la marca "(M)" de menor de edad, toma el número de camiseta solo si se le indica y descarta repetidos y jugadores inscritos en otro equipo. | Alta | ENT-08, F-04 | — | Confirmado |
+| RF-027 | El sistema debe registrar si un jugador es menor de edad. Ese dato solo se muestra en el panel del administrador, no en el sitio público. | Media | ENT-08 | — | Confirmado (ocultarlo en público es decisión por defecto) |
+| RF-028 | Cada equipo debe poder registrar su cuerpo técnico como en el listín: director técnico, dos auxiliares y médico. Al pegar el listín, esos renglones se reconocen como cuerpo técnico y no como jugadores. | Media | ENT-08, F-04 | — | Confirmado: solo se ve en el panel del administrador, no en el sitio público (ENT-08) |
 
 ## 10. Reglas de negocio
 | ID | Regla | Condición | Resultado | Fuente | Estado |
@@ -178,8 +182,8 @@ No se conoce (P-015).
 
 ## 11. Datos e información
 - **Competencia:** tipo (Liga o Copa), nombre del torneo y estado (fase regular, liguilla o terminado). Solo hay una en curso a la vez.
-- **Equipo:** nombre, escudo opcional e inscripción por competencia con su delegado.
-- **Jugador:** nombre, número y estado (pendiente, aprobado o rechazado). Faltan por definir otros datos (P-006).
+- **Equipo:** nombre, abreviatura y color del escudo, cuerpo técnico (director técnico, auxiliares y médico) e inscripción por competencia con su delegado.
+- **Jugador:** nombre, número de camiseta (opcional), posición (opcional: portero, defensa, carrilero, medio o delantero), menor de edad y estado (pendiente, aprobado o rechazado; el estado llega en la fase 4).
 - **Partido:** competencia, fase (regular o liguilla), jornada o ronda, ida o vuelta, fecha, hora, cancha, equipos, estado y motivo del resultado administrativo. Solo en la final: resultado de la tanda de penales.
 - **Eventos del partido:** gol (autor y asistencia opcional, o autogol, y si fue en tiempo extra), tarjeta amarilla y tarjeta roja. Cada evento guarda qué delegado lo capturó.
 - **Suspensión:** jugador, competencia, número de partidos, partidos cumplidos y motivo.
@@ -362,6 +366,8 @@ No quedan preguntas abiertas. El 2026-11-02 el solicitante pidió no hacer más 
 | ENT-05 | Respuestas del solicitante sobre los supuestos | — | 2026-11-02 | Confirma SUP-002, SUP-005 y SUP-006. Descarta SUP-004: la final se define con tiempo extra y penales |
 | ENT-06 | Respuestas del solicitante sobre P-022 y P-004 | — | 2026-11-02 | Los delegados capturan todo, incluida la final. Hay plazo de captura y la sanción es opcional |
 | ENT-07 | Respuestas del solicitante sobre P-004 y P-023 | — | 2026-11-02 | Las sanciones se ven en público y en el panel. Pide no hacer más preguntas sobre temas menores: el analista los decide con valores por defecto (sección 16) |
+| ENT-08 | Datos reales de la liga | — | 2026-11-02 | Torneo "Ascenso 2026-2027", 16 equipos y calendario de 15 jornadas; listines de BODKA JR HUHI y ZORROS HUHI; "(M)" significa menor de edad |
+| F-04 | Listines de jugadores (Word y foto) y calendario visual (PDF) entregados por el solicitante | Tabla de jugadores y calendario | 2026-11-02 | Formato real del listín y del calendario |
 | F-03 | Criterios de la Liga MX para desempate, doble amarilla y columnas de la tabla | Desempate en la tabla general y conteo de tarjetas | Conocimiento general del analista | RN-002, RN-014 y RF-004. No se consultó el reglamento oficial (ver 20.2) |
 
 ### 20.2 Fuentes identificadas pero no consultadas

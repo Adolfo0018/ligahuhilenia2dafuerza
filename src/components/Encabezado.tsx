@@ -4,7 +4,8 @@ import type { Torneo } from '../types'
 
 interface Props {
   torneos: Torneo[]
-  actual: Torneo
+  /** Vacío mientras cargan los torneos o si todavía no hay ninguno. */
+  actual?: Torneo
   onCambiar: (id: string) => void
 }
 
@@ -22,13 +23,13 @@ export function Encabezado({ torneos, actual, onCambiar }: Props) {
           )}
           <div className="marca-texto">
             <p className="marca-liga">{nombreLiga(liga)}</p>
-            <h1 className="marca-torneo">{nombreTorneo(actual)}</h1>
+            <h1 className="marca-torneo">{actual ? nombreTorneo(actual) : liga.nombre}</h1>
           </div>
         </div>
         {torneos.length > 1 && (
           <div className="selector-torneo" role="group" aria-label="Elegir torneo">
             {torneos.map((t) => (
-              <button key={t.id} type="button" aria-pressed={t.id === actual.id} onClick={() => onCambiar(t.id)}>
+              <button key={t.id} type="button" aria-pressed={t.id === actual?.id} onClick={() => onCambiar(t.id)}>
                 {nombreTorneo(t)}
                 <span className="selector-estado">{t.estado === 'terminado' ? 'Terminado' : 'En curso'}</span>
               </button>

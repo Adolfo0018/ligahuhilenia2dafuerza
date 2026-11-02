@@ -956,7 +956,13 @@ button.partido-cuerpo:hover {
   max-width: var(--ancho-max);
   margin: 0 auto;
   padding: 8px 16px max(28px, env(safe-area-inset-bottom));
+  display: grid;
+  gap: 6px;
   color: var(--color-texto-suave);
   font-size: 0.78rem;
   text-align: center;
+}
+
+.pie a {
+  color: inherit;
 }

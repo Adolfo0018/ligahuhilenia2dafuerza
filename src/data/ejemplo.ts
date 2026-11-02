@@ -122,7 +122,7 @@ function crearPlantel(equipoId: string): Jugador[] {
 /** Los delanteros (7, 9, 10 y 11) anotan más; el portero (1) casi nunca. */
 function pesoGol(j: Jugador): number {
   if (j.numero === 1) return 0.05
-  return [7, 9, 10, 11].includes(j.numero) ? 4 : 1
+  return [7, 9, 10, 11].includes(j.numero ?? 0) ? 4 : 1
 }
 
 /** Todos contra todos a una vuelta (método del círculo). Con número impar, en cada jornada descansa uno distinto. */

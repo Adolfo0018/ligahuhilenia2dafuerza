@@ -30,7 +30,8 @@ export function TarjetaPartido({ partido, etiqueta }: { partido: Partido; etique
       <span className="partido-meta">
         <span className="partido-cuando">
           {etiqueta && <strong>{etiqueta} · </strong>}
-          {fechaCorta(partido.fecha)} · {partido.cancha}
+          {fechaCorta(partido.fecha)}
+          {partido.cancha && ` · ${partido.cancha}`}
         </span>
         <span className={`insignia insignia-${partido.estado}`}>{ESTADOS[partido.estado]}</span>
       </span>

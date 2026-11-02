@@ -41,6 +41,8 @@ function FaseRegular() {
     lista.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest' })
   }, [jornada])
 
+  if (!regulares.length) return <p className="vacio">Todavía no hay partidos programados en este torneo.</p>
+
   const partidos = regulares.filter((p) => p.jornada === jornada).sort(porFecha)
   const juegan = new Set(partidos.flatMap((p) => [p.localId, p.visitanteId]))
   const descansan = torneo.equipos.filter((e) => !juegan.has(e.id))
