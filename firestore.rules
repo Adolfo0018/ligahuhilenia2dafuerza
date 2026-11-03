@@ -2,20 +2,39 @@ rules_version = '2';
 
 // Reglas de seguridad de Firestore para la liga.
 // Se publican en la consola de Firebase (Firestore → Reglas) o con `npx firebase deploy --only firestore:rules`.
-// Si cambias la forma de un torneo en src/types.ts, actualiza torneoValido() aquí.
+// Si cambias la forma de un torneo, una captura o una solicitud en src/types.ts, actualiza las validaciones de aquí.
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Cuentas con permisos: un documento por usuario de Authentication, con el UID como id.
-    // Se dan de alta a mano en la consola; nadie puede escribirlos desde la app.
-    function esAdmin() {
-      return request.auth != null
-        && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'admin';
+    // Ficha de la cuenta: un documento por usuario de Authentication, con el UID como id.
+    function ficha() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
     }
 
+    function esAdmin() {
+      return request.auth != null && ficha().rol == 'admin';
+    }
+
+    function esDelegadoDe(equipoId) {
+      return request.auth != null && ficha().rol == 'delegado' && ficha().equipoId == equipoId;
+    }
+
+    function texto(valor, maximo) {
+      return valor is string && valor.size() > 0 && valor.size() <= maximo;
+    }
+
+    // Cada quien lee su ficha; el administrador, todas. Al registrarse, un delegado crea la suya como
+    // "pendiente" y solo el administrador le asigna equipo (rol "delegado") o lo da de alta como admin.
     match /usuarios/{uid} {
-      allow read: if request.auth != null && request.auth.uid == uid;
-      allow write: if false;
+      allow read: if request.auth != null && (request.auth.uid == uid || esAdmin());
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['rol', 'nombre', 'correo', 'equipoSolicitado', 'creadoEn'])
+        && request.resource.data.rol == 'pendiente'
+        && texto(request.resource.data.nombre, 60)
+        && request.resource.data.correo is string
+        && request.resource.data.equipoSolicitado is string
+        && request.resource.data.creadoEn == request.time;
+      allow update, delete: if esAdmin();
     }
 
     // Un documento por torneo con sus equipos, jugadores y partidos. Cualquiera lo consulta;
@@ -32,17 +51,50 @@ service cloud.firestore {
     }
 
     function torneoValido(t) {
-      return t.keys().hasOnly(['tipo', 'nombre', 'estado', 'equipos', 'jugadores', 'partidos', 'suspensiones', 'sanciones', 'creadoEn', 'actualizadoEn'])
+      return t.keys().hasOnly(['tipo', 'nombre', 'estado', 'equipos', 'jugadores', 'partidos', 'suspensiones', 'sanciones', 'plazoCapturaHoras', 'creadoEn', 'actualizadoEn'])
         && t.keys().hasAll(['tipo', 'nombre', 'estado', 'equipos', 'jugadores', 'partidos', 'suspensiones', 'sanciones', 'creadoEn', 'actualizadoEn'])
         && t.tipo in ['liga', 'copa']
         && t.estado in ['regular', 'liguilla', 'terminado']
-        && t.nombre is string && t.nombre.size() > 0 && t.nombre.size() <= 40
+        && texto(t.nombre, 40)
         && t.equipos is list && t.equipos.size() <= 30
         && t.jugadores is list && t.jugadores.size() <= 900
         && t.partidos is list && t.partidos.size() <= 500
         && t.suspensiones is list
         && t.sanciones is list
+        && (!('plazoCapturaHoras' in t) || (t.plazoCapturaHoras is int && t.plazoCapturaHoras >= 1 && t.plazoCapturaHoras <= 168))
         && t.actualizadoEn == request.time;
+    }
+
+    // Captura de un delegado para un partido (RN-006). Solo la ven él y el administrador, así nadie ve
+    // la del rival antes de publicarse (CA-009). Al publicarse se cierra y ya no la puede cambiar (RN-013).
+    // El administrador solo toma de cada captura los eventos del equipo que la envió.
+    match /capturas/{capturaId} {
+      allow read: if esAdmin() || (request.auth != null && esDelegadoDe(resource.data.equipoId));
+      allow create, update: if esDelegadoDe(request.resource.data.equipoId)
+        && capturaId == request.resource.data.torneoId + '_' + request.resource.data.partidoId + '_' + request.resource.data.equipoId
+        && request.resource.data.keys().hasOnly(['torneoId', 'partidoId', 'equipoId', 'eventos', 'cerrada', 'enviadoPor', 'enviadoEn'])
+        && request.resource.data.cerrada == false
+        && request.resource.data.enviadoPor == request.auth.uid
+        && request.resource.data.enviadoEn == request.time
+        && request.resource.data.eventos is list && request.resource.data.eventos.size() <= 60
+        && (resource == null || resource.data.cerrada == false);
+      allow update: if esAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cerrada']);
+      allow delete: if esAdmin();
+    }
+
+    // Altas y bajas de jugadores que pide un delegado (RF-012); el administrador las aprueba en el torneo.
+    match /solicitudes/{solicitudId} {
+      allow read: if esAdmin() || (request.auth != null && esDelegadoDe(resource.data.equipoId));
+      allow create: if esDelegadoDe(request.resource.data.equipoId)
+        && request.resource.data.keys().hasOnly(['torneoId', 'equipoId', 'tipo', 'jugadorId', 'datos', 'estado', 'creadoPor', 'creadoEn'])
+        && request.resource.data.tipo in ['alta', 'baja']
+        && request.resource.data.estado == 'pendiente'
+        && request.resource.data.creadoPor == request.auth.uid
+        && request.resource.data.creadoEn == request.time
+        && (request.resource.data.tipo == 'baja' || texto(request.resource.data.datos.nombre, 50));
+      allow update: if esAdmin();
+      allow delete: if esAdmin() || (request.auth != null && esDelegadoDe(resource.data.equipoId));
     }
   }
 }

@@ -32,6 +32,7 @@ function aTorneo(id: string, d: DocumentData): Torneo {
     partidos: d.partidos ?? [],
     suspensiones: d.suspensiones ?? [],
     sanciones: d.sanciones ?? [],
+    plazoCapturaHoras: d.plazoCapturaHoras,
     creadoEn: d.creadoEn?.toMillis() ?? Date.now(),
   }
 }

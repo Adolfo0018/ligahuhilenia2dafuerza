@@ -400,6 +400,8 @@ Al terminar cada fase hay algo publicado en Netlify que se puede probar desde el
 | **6. Liguilla** | Generación de las llaves, ida y vuelta, marcador global, desempate por posición, tiempo extra y penales en la final, y cuadro visual | Jugar la fase final | Mediano | RF-005, RF-020, RF-023, RN-003, RN-004, RN-005, RN-015 | CA-005, CA-014 |
 | **7. Salida a uso real** | Revisión de reglas, carga del torneo actual, nombre y logo de la liga, y prueba con una jornada real | Usarla con toda la liga | Chico | Todos | Todos |
 
+**Fase 4, decisiones de implementación (2026-11-02):** cada delegado se registra solo en `/admin` y su cuenta queda pendiente hasta que el administrador le asigna el equipo. Las capturas y las altas o bajas de jugadores se guardan en colecciones aparte del torneo (`capturas` y `solicitudes`), para que las reglas de Firestore limiten a cada delegado a su equipo; el administrador las revisa en la sección "Pendientes" y solo él modifica el torneo. De cada captura solo se toman los eventos del equipo que la envió. La sanción por captura tardía se registra desde la alerta de plazo vencido y se ve en Estadísticas.
+
 **Cambio del 2026-11-02:** la fase 3 ya no es un generador automático. La liga entrega su propio calendario como imagen (por ejemplo, el del Ascenso 2026-2027), así que es más útil leer esa imagen y generar los partidos a partir de ella. Para leer la imagen dentro de la app hace falta un servicio de reconocimiento de imágenes (P-024).
 
 **Nota:** la Copa no necesita una fase propia. Desde la fase 2 el modelo de datos soporta varias competencias, así que la Copa es otra competencia con su propia inscripción, que empieza cuando termina la Liga.

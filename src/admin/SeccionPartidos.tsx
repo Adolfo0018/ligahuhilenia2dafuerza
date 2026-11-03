@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import { Escudo } from '../components/Escudo'
 import { useTorneo } from '../lib/contexto'
+import { eventosDeCapturas, useCapturas } from '../lib/delegados'
 import { fechaCorta } from '../lib/formato'
 import { estaPublicado, jornadaActual, juegaEn, marcador, porFecha } from '../lib/partidos'
 import { modificarTorneo } from '../lib/repositorio'
-import type { EstadoPartido, Partido } from '../types'
+import type { Captura, EstadoPartido, Partido } from '../types'
 import { CapturaResultado } from './CapturaResultado'
 import { useGuardado } from './useGuardado'
 import { nuevoId } from './utilidades'
@@ -26,6 +27,7 @@ export function SeccionPartidos() {
   const total = Math.max(1, esperadas, ...regulares.map((p) => p.jornada ?? 1))
   const [jornada, setJornada] = useState(() => (regulares.length ? jornadaActual(torneo) : 1))
   const [agregando, setAgregando] = useState(false)
+  const capturas = useCapturas(torneo.id) ?? []
 
   if (torneo.equipos.length < 2) {
     return <p className="vacio">Primero inscribe al menos dos equipos en “Equipos y jugadores”.</p>
@@ -73,13 +75,12 @@ export function SeccionPartidos() {
           </button>
         )}
       </div>
-      <p className="nota">El generador automático del calendario llega en la fase 3; mientras tanto los partidos se agregan aquí uno por uno.</p>
 
       {agregando && <FormPartido jornadaInicial={jornada} onListo={() => setAgregando(false)} />}
       {partidos.length ? (
         <div className="lista-admin">
           {partidos.map((p) => (
-            <TarjetaPartidoAdmin key={p.id} partido={p} />
+            <TarjetaPartidoAdmin key={p.id} partido={p} capturas={capturas.filter((c) => c.partidoId === p.id)} />
           ))}
         </div>
       ) : (
@@ -92,12 +93,14 @@ export function SeccionPartidos() {
   )
 }
 
-function TarjetaPartidoAdmin({ partido }: { partido: Partido }) {
+function TarjetaPartidoAdmin({ partido, capturas }: { partido: Partido; capturas: Captura[] }) {
   const { torneo, equipo } = useTorneo()
   const [modo, setModo] = useState<'ver' | 'editar' | 'resultado'>('ver')
   const { guardar, aviso } = useGuardado()
   const publicado = estaPublicado(partido)
   const m = publicado ? marcador(partido) : null
+  // Mientras no esté publicado, la captura de los delegados es el punto de partida del resultado.
+  const usarCapturas = !publicado && capturas.length > 0
 
   function aplazar() {
     if (!window.confirm('¿Aplazar este partido? Conserva su jornada y queda con fecha por definir.')) return
@@ -117,7 +120,16 @@ function TarjetaPartidoAdmin({ partido }: { partido: Partido }) {
   }
 
   if (modo === 'editar') return <FormPartido partido={partido} jornadaInicial={partido.jornada ?? 1} onListo={() => setModo('ver')} />
-  if (modo === 'resultado') return <CapturaResultado partido={partido} onListo={() => setModo('ver')} />
+  if (modo === 'resultado') {
+    return (
+      <CapturaResultado
+        partido={partido}
+        eventosIniciales={usarCapturas ? eventosDeCapturas(capturas) : undefined}
+        capturas={capturas.map((c) => c.id)}
+        onListo={() => setModo('ver')}
+      />
+    )
+  }
 
   return (
     <div className="tarjeta tarjeta-partido-admin">
@@ -132,12 +144,17 @@ function TarjetaPartidoAdmin({ partido }: { partido: Partido }) {
           <Escudo equipo={equipo(id)} />
           <span className="fila-nombre">{equipo(id).nombre}</span>
           {m && <span className="fila-goles">{i === 0 ? m.local : m.visitante}</span>}
+          {!publicado && capturas.length > 0 && (
+            <span className={capturas.some((c) => c.equipoId === id) ? 'estado-captura listo' : 'estado-captura'}>
+              {capturas.some((c) => c.equipoId === id) ? 'Capturó' : 'Sin captura'}
+            </span>
+          )}
         </span>
       ))}
       {aviso}
       <div className="acciones">
         <button type="button" className="boton boton-chico" onClick={() => setModo('resultado')}>
-          {publicado ? 'Editar resultado' : 'Capturar resultado'}
+          {publicado ? 'Editar resultado' : usarCapturas ? 'Revisar captura' : 'Capturar resultado'}
         </button>
         <button type="button" className="boton boton-chico boton-secundario" onClick={() => setModo('editar')}>
           {partido.estado === 'aplazado' ? 'Reprogramar' : 'Editar'}

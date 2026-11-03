@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Escudo } from '../components/Escudo'
 import { useTorneo } from '../lib/contexto'
+import { cerrarCapturas, reabrirCapturas } from '../lib/delegados'
 import { etiquetaJugador, porNumero } from '../lib/formato'
 import { estaPublicado, marcador } from '../lib/partidos'
 import { modificarTorneo } from '../lib/repositorio'
@@ -11,16 +12,16 @@ import { nuevoId } from './utilidades'
 /** Valor del selector de goleador que marca un autogol a favor. */
 const AUTOGOL = 'autogol'
 
-type Gol = Extract<Evento, { tipo: 'gol' }>
-type Tarjeta = Extract<Evento, { tipo: 'amarilla' | 'roja' }>
+export type Gol = Extract<Evento, { tipo: 'gol' }>
+export type Tarjeta = Extract<Evento, { tipo: 'amarilla' | 'roja' }>
 
 /** Cada renglón lleva una clave local para que React no confunda renglones al borrar uno de en medio. */
-interface Renglon<T> {
+export interface Renglon<T> {
   clave: string
   evento: T
 }
 
-function conClave<T>(evento: T): Renglon<T> {
+export function conClave<T>(evento: T): Renglon<T> {
   return { clave: nuevoId('r'), evento }
 }
 
@@ -28,7 +29,7 @@ function conClave<T>(evento: T): Renglon<T> {
  * Dos amarillas al mismo jugador en el partido se guardan como 1 amarilla y 1 roja por doble amarilla,
  * igual que en la Liga MX (RN-014).
  */
-function normalizarTarjetas(tarjetas: Tarjeta[]): Tarjeta[] {
+export function normalizarTarjetas(tarjetas: Tarjeta[]): Tarjeta[] {
   const resultado: Tarjeta[] = []
   const amonestados = new Set<string>()
   const conRoja = new Set(tarjetas.filter((t) => t.tipo === 'roja').map((t) => t.jugadorId))
@@ -46,10 +47,20 @@ function normalizarTarjetas(tarjetas: Tarjeta[]): Tarjeta[] {
   return resultado
 }
 
-export function CapturaResultado({ partido, onListo }: { partido: Partido; onListo: () => void }) {
+interface Props {
+  partido: Partido
+  onListo: () => void
+  /** Capturas de los delegados ya combinadas; si no hay, se parte del resultado publicado. */
+  eventosIniciales?: Evento[]
+  /** Ids de las capturas de los delegados: se cierran al publicar y se reabren al quitar el resultado. */
+  capturas?: string[]
+}
+
+export function CapturaResultado({ partido, onListo, eventosIniciales, capturas = [] }: Props) {
   const { torneo } = useTorneo()
-  const [goles, setGoles] = useState(() => partido.eventos.filter((e): e is Gol => e.tipo === 'gol').map(conClave))
-  const [tarjetas, setTarjetas] = useState(() => partido.eventos.filter((e): e is Tarjeta => e.tipo !== 'gol').map(conClave))
+  const iniciales = eventosIniciales ?? partido.eventos
+  const [goles, setGoles] = useState(() => iniciales.filter((e): e is Gol => e.tipo === 'gol').map(conClave))
+  const [tarjetas, setTarjetas] = useState(() => iniciales.filter((e): e is Tarjeta => e.tipo !== 'gol').map(conClave))
   const { guardar, fallar, guardando, aviso } = useGuardado()
   const publicado = estaPublicado(partido)
   const borrador: Partido = { ...partido, estado: 'finalizado', eventos: goles.map((g) => g.evento) }
@@ -59,31 +70,29 @@ export function CapturaResultado({ partido, onListo }: { partido: Partido; onLis
     // Un gol puede quedar sin autor (por ejemplo, un resultado anterior del que solo se conoce el marcador).
     if (tarjetas.some((t) => !t.evento.jugadorId)) return fallar('Elige a qué jugador es cada tarjeta.')
     const eventos: Evento[] = [...goles.map((g) => g.evento), ...normalizarTarjetas(tarjetas.map((t) => t.evento))]
-    const ok = await guardar(
-      () =>
-        modificarTorneo(torneo.id, (t) => ({
-          partidos: t.partidos.map((p) => (p.id === partido.id ? { ...p, estado: 'finalizado', eventos } : p)),
-        })),
-      'Resultado publicado',
-    )
+    const ok = await guardar(async () => {
+      await modificarTorneo(torneo.id, (t) => ({
+        partidos: t.partidos.map((p) => (p.id === partido.id ? { ...p, estado: 'finalizado', eventos } : p)),
+      }))
+      await cerrarCapturas(capturas)
+    }, 'Resultado publicado')
     if (ok) onListo()
   }
 
   async function quitar() {
     if (!window.confirm('¿Quitar el resultado? El partido vuelve a programado y sale de la tabla y las estadísticas.')) return
-    const ok = await guardar(
-      () =>
-        modificarTorneo(torneo.id, (t) => ({
-          partidos: t.partidos.map((p) => (p.id === partido.id ? { ...p, estado: 'programado', eventos: [] } : p)),
-        })),
-      'Resultado quitado',
-    )
+    const ok = await guardar(async () => {
+      await modificarTorneo(torneo.id, (t) => ({
+        partidos: t.partidos.map((p) => (p.id === partido.id ? { ...p, estado: 'programado', eventos: [] } : p)),
+      }))
+      await reabrirCapturas(capturas)
+    }, 'Resultado quitado')
     if (ok) onListo()
   }
 
   return (
     <div className="tarjeta formulario captura">
-      <h3 className="formulario-titulo">Resultado</h3>
+      <h3 className="formulario-titulo">{eventosIniciales ? 'Revisar captura de los delegados' : 'Resultado'}</h3>
       <div className="captura-marcador" aria-live="polite">
         <span>{m.local}</span>
         <span aria-hidden="true">–</span>
@@ -128,7 +137,7 @@ interface PropsColumna {
   onTarjetas: (tarjetas: Renglon<Tarjeta>[]) => void
 }
 
-function ColumnaEquipo({ equipoId, goles, tarjetas, onGoles, onTarjetas }: PropsColumna) {
+export function ColumnaEquipo({ equipoId, goles, tarjetas, onGoles, onTarjetas }: PropsColumna) {
   const { torneo, equipo } = useTorneo()
   const plantel = torneo.jugadores.filter((j) => j.equipoId === equipoId).sort(porNumero)
   const opciones = plantel.map((j) => (

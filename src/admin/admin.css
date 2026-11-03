@@ -510,6 +510,32 @@ img.acceso-logo {
   padding: 0;
 }
 
+.estado-captura {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fdecea;
+  color: #a1281e;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.estado-captura.listo {
+  background: #e7f6ec;
+  color: #1b6e3c;
+}
+
+.acceso-enlaces {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.plantel-delegado {
+  padding: 4px 14px;
+}
+
 .resumen {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));

@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useTorneo } from '../lib/contexto'
+import { PLAZO_CAPTURA_HORAS } from '../lib/delegados'
 import { nombreTorneo } from '../lib/formato'
 import { borrarTorneo, modificarTorneo } from '../lib/repositorio'
 import type { EstadoTorneo, TipoCompetencia } from '../types'
@@ -13,6 +14,7 @@ export function SeccionTorneo() {
   const [nombre, setNombre] = useState(torneo.nombre)
   const [tipo, setTipo] = useState<TipoCompetencia>(torneo.tipo)
   const [estado, setEstado] = useState<EstadoTorneo>(torneo.estado)
+  const [plazo, setPlazo] = useState(String(torneo.plazoCapturaHoras ?? PLAZO_CAPTURA_HORAS))
   const { guardar, fallar, guardando, aviso } = useGuardado()
   const tamano = new Blob([JSON.stringify(torneo)]).size
   const publicados = torneo.partidos.filter((p) => p.estado === 'finalizado' || p.estado === 'administrativo').length
@@ -20,7 +22,12 @@ export function SeccionTorneo() {
   function guardarCambios(e: FormEvent) {
     e.preventDefault()
     if (!nombre.trim()) return fallar('Escribe el nombre del torneo.')
-    guardar(() => modificarTorneo(torneo.id, () => ({ nombre: nombre.trim(), tipo, estado })), 'Cambios guardados')
+    const horas = Number(plazo)
+    if (!Number.isInteger(horas) || horas < 1 || horas > 168) return fallar('El plazo de captura debe ser de 1 a 168 horas.')
+    guardar(
+      () => modificarTorneo(torneo.id, () => ({ nombre: nombre.trim(), tipo, estado, plazoCapturaHoras: horas })),
+      'Cambios guardados',
+    )
   }
 
   function borrar() {
@@ -53,6 +60,10 @@ export function SeccionTorneo() {
               <option value="liguilla">En curso: liguilla</option>
               <option value="terminado">Terminado</option>
             </select>
+          </label>
+          <label className="campo">
+            <span>Plazo de captura de los delegados (horas)</span>
+            <input type="number" inputMode="numeric" min={1} max={168} value={plazo} onChange={(e) => setPlazo(e.target.value)} />
           </label>
         </div>
         <p className="nota">

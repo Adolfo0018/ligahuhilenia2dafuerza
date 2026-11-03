@@ -8,16 +8,34 @@ import { auth } from '../lib/sesion'
 import { useTorneos } from '../lib/torneos'
 import { NuevoTorneo } from './NuevoTorneo'
 import { SeccionEquipos } from './SeccionEquipos'
+import type { Torneo } from '../types'
 import { SeccionPartidos } from './SeccionPartidos'
+import { SeccionPendientes, usePendientes } from './SeccionPendientes'
 import { SeccionTorneo } from './SeccionTorneo'
 
-type Seccion = 'partidos' | 'equipos' | 'torneo'
+type Seccion = 'pendientes' | 'partidos' | 'equipos' | 'torneo'
 
-const SECCIONES: { id: Seccion; nombre: string }[] = [
-  { id: 'partidos', nombre: 'Partidos' },
-  { id: 'equipos', nombre: 'Equipos y jugadores' },
-  { id: 'torneo', nombre: 'Torneo' },
-]
+/** Secciones del torneo elegido; "Pendientes" muestra cuántas cosas esperan al administrador. */
+function ContenidoTorneo({ torneo, seccion, onSeccion }: { torneo: Torneo; seccion: Seccion; onSeccion: (s: Seccion) => void }) {
+  const { total } = usePendientes(torneo)
+  const secciones: { id: Seccion; nombre: string }[] = [
+    { id: 'pendientes', nombre: total ? `Pendientes (${total})` : 'Pendientes' },
+    { id: 'partidos', nombre: 'Partidos' },
+    { id: 'equipos', nombre: 'Equipos y jugadores' },
+    { id: 'torneo', nombre: 'Torneo' },
+  ]
+  return (
+    <>
+      <Segmentado etiqueta="Sección" opciones={secciones} valor={seccion} onCambiar={onSeccion} ajustable />
+      <div className="admin-seccion">
+        {seccion === 'pendientes' && <SeccionPendientes />}
+        {seccion === 'partidos' && <SeccionPartidos />}
+        {seccion === 'equipos' && <SeccionEquipos />}
+        {seccion === 'torneo' && <SeccionTorneo />}
+      </div>
+    </>
+  )
+}
 
 export function Panel({ usuario }: { usuario: User }) {
   const carga = useTorneos()
@@ -92,16 +110,9 @@ export function Panel({ usuario }: { usuario: User }) {
             )}
 
             {torneo ? (
-              <>
-                <Segmentado etiqueta="Sección" opciones={SECCIONES} valor={seccion} onCambiar={setSeccion} ajustable />
-                <ProveedorTorneo torneo={torneo}>
-                  <div className="admin-seccion" key={torneo.id}>
-                    {seccion === 'partidos' && <SeccionPartidos />}
-                    {seccion === 'equipos' && <SeccionEquipos />}
-                    {seccion === 'torneo' && <SeccionTorneo />}
-                  </div>
-                </ProveedorTorneo>
-              </>
+              <ProveedorTorneo torneo={torneo}>
+                <ContenidoTorneo key={torneo.id} torneo={torneo} seccion={seccion} onSeccion={setSeccion} />
+              </ProveedorTorneo>
             ) : (
               !creando && <p className="vacio">Todavía no hay torneos. Crea el primero con “Nuevo torneo”.</p>
             )}

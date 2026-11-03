@@ -115,6 +115,59 @@ export interface Torneo {
   partidos: Partido[]
   suspensiones: Suspension[]
   sanciones: Sancion[]
+  /** Horas que tienen los delegados para capturar después de la hora del partido (RF-025). Por defecto, 24. */
+  plazoCapturaHoras?: number
   /** Milisegundos; lo pone el servidor al crear el torneo. */
+  creadoEn?: number
+}
+
+export type Rol = 'admin' | 'delegado' | 'pendiente'
+
+/** Ficha de una cuenta en la colección "usuarios"; el id es el UID de Authentication. */
+export interface Usuario {
+  uid: string
+  rol: Rol
+  nombre?: string
+  correo?: string
+  /** Equipo que representa un delegado. Los equipos conservan su id al copiarse a otro torneo. */
+  equipoId?: string
+  equipoNombre?: string
+  /** Lo que eligió al registrarse; el administrador confirma o cambia el equipo. */
+  equipoSolicitado?: string
+  creadoEn?: number
+}
+
+/** Lo que capturó el delegado de un equipo para un partido; el administrador la revisa y publica (RN-006). */
+export interface Captura {
+  id: string
+  torneoId: string
+  partidoId: string
+  equipoId: string
+  eventos: Evento[]
+  /** Al publicarse el partido se cierra y el delegado ya no la puede cambiar (RN-013). */
+  cerrada: boolean
+  enviadoPor: string
+  enviadoEn?: number
+}
+
+export interface DatosJugador {
+  nombre: string
+  numero?: number
+  posicion?: Posicion
+  menor?: boolean
+}
+
+/** Alta o baja de un jugador pedida por un delegado; queda pendiente hasta que el administrador la resuelve (RF-012). */
+export interface Solicitud {
+  id: string
+  torneoId: string
+  equipoId: string
+  tipo: 'alta' | 'baja'
+  /** Solo en una baja. */
+  jugadorId?: string
+  /** Solo en un alta. */
+  datos?: DatosJugador
+  estado: 'pendiente' | 'rechazada'
+  creadoPor: string
   creadoEn?: number
 }

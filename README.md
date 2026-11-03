@@ -18,7 +18,13 @@ La tabla, la liguilla y las estadísticas ya se calculan a partir de los partido
 | Colección | Qué guarda | Quién escribe |
 |---|---|---|
 | `torneos` | Un documento por torneo con sus equipos, jugadores, partidos y resultados | Solo el administrador; todos pueden leer |
-| `usuarios` | Un documento por cuenta con permisos, con el **UID** de Authentication como id y el campo `rol` | Solo a mano desde la consola |
+| `usuarios` | Un documento por cuenta, con el **UID** de Authentication como id y el campo `rol` (`admin`, `delegado` o `pendiente`) | El delegado crea la suya como `pendiente` al registrarse; el administrador le asigna equipo desde el panel. El rol `admin` solo se da a mano en la consola |
+| `capturas` | Lo que captura cada delegado de su equipo en un partido | El delegado de ese equipo, hasta que se publica el resultado |
+| `solicitudes` | Altas y bajas de jugadores pedidas por los delegados | El delegado las crea; el administrador las aprueba o rechaza |
+
+### Delegados
+
+Cada delegado entra a `/admin`, elige **Soy delegado: crear cuenta** y llena su nombre, correo, contraseña y equipo. El administrador ve la cuenta en **Pendientes** y le da acceso. Desde su panel, el delegado captura los goles, asistencias y tarjetas de su equipo en cada partido jugado y pide altas y bajas de jugadores. El administrador revisa y publica.
 
 ### Publicar las reglas
 
