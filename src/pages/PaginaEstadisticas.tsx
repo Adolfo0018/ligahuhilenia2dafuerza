@@ -14,6 +14,7 @@ import {
   type FilaJugador,
 } from '../lib/estadisticas'
 import { fechaSinHora } from '../lib/formato'
+import { seVe, type ConfigSitio } from '../lib/sitio'
 
 type Apartado = 'goleadores' | 'asistencias' | 'tarjetas' | 'equipos' | 'disciplina'
 
@@ -34,14 +35,18 @@ const FILTROS: { id: FiltroFase; nombre: string }[] = [
 /** Cuántas filas se ven antes de "Ver todos". */
 const FILAS_VISIBLES = 10
 
-export function PaginaEstadisticas() {
+export function PaginaEstadisticas({ config }: { config: ConfigSitio }) {
   const { torneo } = useTorneo()
   const hayLiguilla = torneo.partidos.some((p) => p.fase === 'liguilla')
-  const [apartado, setApartado] = useState<Apartado>('goleadores')
+  const apartados = APARTADOS.filter((a) => seVe(config, `estadisticas.${a.id}`))
+  const [elegido, setApartado] = useState<Apartado>('goleadores')
+  const apartado = apartados.find((a) => a.id === elegido)?.id ?? apartados[0]?.id ?? 'goleadores'
   const [filtro, setFiltro] = useState<FiltroFase>('regular')
   return (
     <>
-      <Segmentado etiqueta="Estadística" opciones={APARTADOS} valor={apartado} onCambiar={setApartado} ajustable />
+      {apartados.length > 1 && (
+        <Segmentado etiqueta="Estadística" opciones={apartados} valor={apartado} onCambiar={setApartado} ajustable />
+      )}
       {hayLiguilla && apartado !== 'disciplina' && (
         <Segmentado etiqueta="Fase" opciones={FILTROS} valor={filtro} onCambiar={setFiltro} />
       )}

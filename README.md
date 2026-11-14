@@ -21,6 +21,7 @@ La tabla, la liguilla y las estadísticas ya se calculan a partir de los partido
 | `usuarios` | Un documento por cuenta, con el **UID** de Authentication como id y el campo `rol` (`admin`, `delegado` o `pendiente`) | El delegado crea la suya como `pendiente` al registrarse; el administrador le asigna equipo desde el panel. El rol `admin` solo se da a mano en la consola |
 | `capturas` | Lo que captura cada delegado de su equipo en un partido | El delegado de ese equipo, hasta que se publica el resultado |
 | `solicitudes` | Altas y bajas de jugadores pedidas por los delegados | El delegado las crea; el administrador las aprueba o rechaza |
+| `configuracion` | Un solo documento, `sitio`, con las secciones del sitio público que el administrador ocultó (pestaña **Sitio** del panel) | Solo el administrador; todos pueden leer |
 
 ### Delegados
 

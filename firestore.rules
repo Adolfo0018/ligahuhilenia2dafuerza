@@ -83,6 +83,15 @@ service cloud.firestore {
       allow delete: if esAdmin();
     }
 
+    // Qué secciones se ven en el sitio público (un solo documento, "sitio"). Cualquiera lo lee; solo el administrador lo cambia.
+    match /configuracion/{id} {
+      allow read: if true;
+      allow write: if esAdmin() && id == 'sitio'
+        && request.resource.data.keys().hasOnly(['ocultos', 'actualizadoEn'])
+        && request.resource.data.ocultos is list && request.resource.data.ocultos.size() <= 30
+        && request.resource.data.actualizadoEn == request.time;
+    }
+
     // Altas y bajas de jugadores que pide un delegado (RF-012); el administrador las aprueba en el torneo.
     match /solicitudes/{solicitudId} {
       allow read: if esAdmin() || (request.auth != null && esDelegadoDe(resource.data.equipoId));

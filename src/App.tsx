@@ -3,6 +3,7 @@ import { Encabezado } from './components/Encabezado'
 import { NavSecciones } from './components/NavSecciones'
 import { PiePagina } from './components/PiePagina'
 import { ProveedorTorneo } from './lib/contexto'
+import { seVe, useConfigSitio, type ConfigSitio } from './lib/sitio'
 import { useTorneos } from './lib/torneos'
 import { PaginaClasificacion } from './pages/PaginaClasificacion'
 import { PaginaEstadisticas } from './pages/PaginaEstadisticas'
@@ -52,12 +53,18 @@ function useTardando(cargando: boolean): boolean {
 
 function SitioPublico() {
   const carga = useTorneos()
+  const cargaConfig = useConfigSitio()
   const [inicio] = useState(leerUrl)
   const [torneoId, setTorneoId] = useState(inicio.torneoId)
-  const [seccion, setSeccion] = useState<Seccion>(inicio.seccion)
-  const torneos = carga.estado === 'listo' ? carga.torneos : []
+  const [elegida, setSeccion] = useState<Seccion>(inicio.seccion)
+  // Mientras llega la configuración no se muestra nada, para no enseñar por un instante lo que el administrador ocultó.
+  const config: ConfigSitio | null = cargaConfig.estado === 'listo' ? cargaConfig.config : null
+  const torneos = carga.estado === 'listo' && config ? carga.torneos : []
   const torneo = torneos.find((t) => t.id === torneoId) ?? torneos[0]
-  const tardando = useTardando(carga.estado === 'cargando')
+  const tardando = useTardando(carga.estado === 'cargando' || !config)
+  const secciones = config ? SECCIONES.filter((s) => seVe(config, s.id)) : []
+  // Si la sección del enlace está oculta, se abre la primera visible.
+  const seccion = secciones.find((s) => s.id === elegida)?.id ?? secciones[0]?.id ?? 'partidos'
 
   // La URL guarda el torneo y la sección, así un enlace compartido abre lo mismo.
   useEffect(() => {
@@ -68,7 +75,7 @@ function SitioPublico() {
 
   if (!torneo) {
     const mensaje =
-      carga.estado === 'cargando'
+      carga.estado === 'cargando' || !config
         ? tardando
           ? 'Está tardando más de lo normal. Revisa tu conexión; la información aparecerá en cuanto se conecte.'
           : 'Cargando la información de la liga…'
@@ -83,22 +90,36 @@ function SitioPublico() {
             {mensaje}
           </p>
         </main>
-        <PiePagina />
+        <PiePagina acceso={!config || seVe(config, 'acceso')} />
       </>
+    )
+  }
+
+  if (!secciones.length) {
+    return (
+      <ProveedorTorneo torneo={torneo}>
+        <Encabezado torneos={torneos} actual={torneo} onCambiar={setTorneoId} />
+        <main className="contenido">
+          <p className="vacio" role="status">
+            Por ahora la liga no tiene información publicada en el sitio.
+          </p>
+        </main>
+        <PiePagina acceso={seVe(config!, 'acceso')} />
+      </ProveedorTorneo>
     )
   }
 
   return (
     <ProveedorTorneo torneo={torneo}>
       <Encabezado torneos={torneos} actual={torneo} onCambiar={setTorneoId} />
-      <NavSecciones secciones={SECCIONES} actual={seccion} onCambiar={setSeccion} />
+      {secciones.length > 1 && <NavSecciones secciones={secciones} actual={seccion} onCambiar={setSeccion} />}
       {/* La clave reinicia filtros y jornada al cambiar de torneo. */}
       <main className="contenido" key={torneo.id}>
         {seccion === 'partidos' && <PaginaPartidos />}
-        {seccion === 'clasificacion' && <PaginaClasificacion />}
-        {seccion === 'estadisticas' && <PaginaEstadisticas />}
+        {seccion === 'clasificacion' && <PaginaClasificacion config={config!} />}
+        {seccion === 'estadisticas' && <PaginaEstadisticas config={config!} />}
       </main>
-      <PiePagina />
+      <PiePagina acceso={seVe(config!, 'acceso')} />
     </ProveedorTorneo>
   )
 }
