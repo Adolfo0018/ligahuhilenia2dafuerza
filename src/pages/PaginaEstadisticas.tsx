@@ -65,34 +65,43 @@ function Ranking({ filas, unidad }: { filas: FilaJugador[]; unidad: string }) {
   const [todos, setTodos] = useState(false)
   if (!filas.length) return <p className="vacio">Todavía no hay {unidad} en esta fase.</p>
   return (
+    // Como el widget de Liga MX de Bing: Jugador (avatar y nombre) · Equipo (escudo y nombre) · total.
     <div className="tarjeta">
-      <ol className="ranking">
-        {(todos ? filas : filas.slice(0, FILAS_VISIBLES)).map((f) => {
-          // Los empatados comparten lugar.
-          const lugar = filas.findIndex((g) => g.valor === f.valor) + 1
-          const eq = equipo(f.jugador.equipoId)
-          return (
-            <li key={f.jugador.id}>
-              <span className="ranking-lugar">{lugar}</span>
-              {/* Avatar del jugador con el escudo de su equipo como insignia. */}
-              <span className="avatar-con-escudo">
-                <Avatar nombre={f.jugador.nombre} color={eq?.color} />
-                {eq && <Escudo equipo={eq} chico />}
-              </span>
-              <span className="ranking-quien">
-                <strong>{f.jugador.nombre}</strong>
-                <span>
-                  {eq.nombre}
-                  {f.jugador.numero !== undefined && ` · #${f.jugador.numero}`}
-                </span>
-              </span>
-              <span className="ranking-valor" aria-label={`${f.valor} ${unidad}`}>
-                {f.valor}
-              </span>
-            </li>
-          )
-        })}
-      </ol>
+      <table className="tabla-jugadores">
+        <thead>
+          <tr>
+            <th scope="col">Jugador</th>
+            <th scope="col">Equipo</th>
+            <th scope="col" className="tabla-jugadores-valor">
+              {unidad[0].toUpperCase() + unidad.slice(1)}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {(todos ? filas : filas.slice(0, FILAS_VISIBLES)).map((f) => {
+            const eq = equipo(f.jugador.equipoId)
+            return (
+              <tr key={f.jugador.id}>
+                <td>
+                  <span className="tabla-jugadores-celda">
+                    <Avatar nombre={f.jugador.nombre} color={eq?.color} />
+                    <span className="tabla-jugadores-nombre">{f.jugador.nombre}</span>
+                  </span>
+                </td>
+                <td>
+                  {eq && (
+                    <span className="tabla-jugadores-celda" title={eq.nombre}>
+                      <Escudo equipo={eq} chico />
+                      <span className="tabla-jugadores-equipo">{eq.nombre}</span>
+                    </span>
+                  )}
+                </td>
+                <td className="tabla-jugadores-valor">{f.valor}</td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
       <VerTodos total={filas.length} todos={todos} onCambiar={setTodos} />
     </div>
   )

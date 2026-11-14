@@ -1011,36 +1011,84 @@ button.partido-cuerpo:hover {
   min-width: 0;
 }
 
-/* Avatar con el escudo del equipo como insignia en la esquina (Goleadores y Asistencias). */
-.avatar-con-escudo {
-  position: relative;
-  flex: none;
-  display: inline-grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-}
-
-.avatar-con-escudo .avatar {
-  width: 34px;
-  height: 34px;
-}
-
-.avatar-con-escudo .escudo {
-  position: absolute;
-  right: -5px;
-  bottom: -3px;
-  width: 16px;
-  height: 16px;
-  font-size: 0.4rem;
-  box-shadow: 0 0 0 1.5px var(--color-superficie);
-}
-
-.avatar-con-escudo .escudo-imagen {
-  background: var(--color-superficie);
-  border-radius: 50%;
-}
-
 .eventos .avatar {
   margin-top: 1px;
+}
+
+/* ---------- Goleadores y asistencias, como el widget de Liga MX de Bing ---------- */
+
+.tabla-jugadores {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.tabla-jugadores th {
+  padding: 10px 14px;
+  color: var(--color-texto-suave);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.tabla-jugadores th:nth-child(2) {
+  width: 42%;
+}
+
+.tabla-jugadores th:last-child {
+  width: 64px;
+}
+
+.tabla-jugadores td {
+  padding: 10px 14px;
+  border-top: 1px solid var(--color-borde);
+  vertical-align: middle;
+}
+
+.tabla-jugadores-valor {
+  text-align: center !important;
+  font-family: var(--fuente-numeros);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.tabla-jugadores-celda {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.tabla-jugadores-nombre {
+  min-width: 0;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.tabla-jugadores-equipo {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.88rem;
+}
+
+/* En celular el equipo queda solo con su escudo, para dejar espacio al nombre del jugador. */
+@media (max-width: 480px) {
+  .tabla-jugadores th,
+  .tabla-jugadores td {
+    padding: 9px 10px;
+  }
+
+  .tabla-jugadores th:nth-child(2) {
+    width: 64px;
+  }
+
+  .tabla-jugadores-equipo {
+    display: none;
+  }
+
+  .tabla-jugadores td:nth-child(2) .tabla-jugadores-celda {
+    justify-content: center;
+  }
 }
