@@ -7,6 +7,7 @@ import { estaPublicado, jornadaActual, juegaEn, marcador, porFecha } from '../li
 import { modificarTorneo } from '../lib/repositorio'
 import type { Captura, EstadoPartido, Partido } from '../types'
 import { CapturaResultado } from './CapturaResultado'
+import { ImportarCalendario } from './ImportarCalendario'
 import { useGuardado } from './useGuardado'
 import { nuevoId } from './utilidades'
 
@@ -27,6 +28,7 @@ export function SeccionPartidos() {
   const total = Math.max(1, esperadas, ...regulares.map((p) => p.jornada ?? 1))
   const [jornada, setJornada] = useState(() => (regulares.length ? jornadaActual(torneo) : 1))
   const [agregando, setAgregando] = useState(false)
+  const [importando, setImportando] = useState(false)
   const capturas = useCapturas(torneo.id) ?? []
 
   if (torneo.equipos.length < 2) {
@@ -69,13 +71,21 @@ export function SeccionPartidos() {
         <h2 className="titulo-seccion">
           Jornada {jornada} <small>{partidos.length === 1 ? '1 partido' : `${partidos.length} partidos`}</small>
         </h2>
-        {!agregando && (
-          <button type="button" className="boton" onClick={() => setAgregando(true)}>
-            + Agregar partido
-          </button>
-        )}
+        <div className="acciones">
+          {!importando && (
+            <button type="button" className="boton boton-secundario" onClick={() => setImportando(true)}>
+              Pegar calendario
+            </button>
+          )}
+          {!agregando && (
+            <button type="button" className="boton" onClick={() => setAgregando(true)}>
+              + Agregar partido
+            </button>
+          )}
+        </div>
       </div>
 
+      {importando && <ImportarCalendario onListo={() => setImportando(false)} />}
       {agregando && <FormPartido jornadaInicial={jornada} onListo={() => setAgregando(false)} />}
       {partidos.length ? (
         <div className="lista-admin">

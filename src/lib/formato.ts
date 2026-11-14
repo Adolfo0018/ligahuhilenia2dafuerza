@@ -41,7 +41,8 @@ const HORA = new Intl.DateTimeFormat('es-MX', { hour: '2-digit', minute: '2-digi
 export function fechaCorta(fecha: string): string {
   if (!fecha) return 'Fecha por definir'
   const d = new Date(fecha)
-  return `${DIA.format(d)} · ${HORA.format(d)}`
+  // 00:00 es "hora por definir" (por ejemplo, un calendario pegado que solo trae el día).
+  return fecha.endsWith('T00:00') ? DIA.format(d) : `${DIA.format(d)} · ${HORA.format(d)}`
 }
 
 /** Para fechas sin hora ("2026-10-05"); el mediodía evita que la zona horaria la mueva al día anterior. */

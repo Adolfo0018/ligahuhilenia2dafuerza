@@ -660,3 +660,65 @@ img.acceso-logo {
 .casilla:has(input:disabled) {
   opacity: 0.55;
 }
+
+/* ---------- Pegar calendario ---------- */
+
+.tabla-importar-contenedor {
+  max-height: 360px;
+  overflow: auto;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-chico);
+}
+
+.tabla-importar {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.tabla-importar th {
+  position: sticky;
+  top: 0;
+  padding: 6px 8px;
+  background: var(--color-fondo);
+  color: var(--color-texto-suave);
+  font-size: 0.75rem;
+  text-align: left;
+}
+
+.tabla-importar td {
+  padding: 6px 8px;
+  border-top: 1px solid var(--color-borde);
+  vertical-align: top;
+}
+
+.tabla-importar td:first-child {
+  color: var(--color-texto-suave);
+  font-family: var(--fuente-numeros);
+}
+
+.tabla-importar td span:not(.insignia) {
+  display: block;
+  color: var(--color-texto-suave);
+  font-size: 0.78rem;
+}
+
+.importar-insignia-nuevo,
+.importar-insignia-actualiza {
+  background: #e7f6ec;
+  color: #1b6e3c;
+}
+
+.importar-insignia-igual {
+  background: var(--color-fondo);
+  color: var(--color-texto-suave);
+}
+
+.importar-insignia-error {
+  background: #fdecea;
+  color: #a1281e;
+}
+
+.importar-igual {
+  opacity: 0.6;
+}
