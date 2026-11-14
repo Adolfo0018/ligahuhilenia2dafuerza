@@ -85,3 +85,63 @@ export function armarLlaves(t: Torneo, tabla: FilaTabla[]): Llave[] {
   const orden = RONDAS.map((r) => r.id)
   return llaves.sort((x, y) => orden.indexOf(x.ronda) - orden.indexOf(y.ronda) || x.numero - y.numero)
 }
+
+/** Equipos que van a la liguilla (RF-020). */
+export const CLASIFICADOS = 8
+
+export type PasoLiguilla =
+  | { tipo: 'generar'; ronda: Ronda; cruces: [Sembrado, Sembrado][]; pendientes: number }
+  | { tipo: 'esperar'; ronda: Ronda; faltan: number }
+  | { tipo: 'campeon'; campeon: Sembrado }
+  | { tipo: 'imposible'; motivo: string }
+
+/**
+ * Qué sigue en la liguilla: generar los cuartos con los 8 primeros, esperar a que se definan las llaves de una ronda,
+ * generar la siguiente con los ganadores reacomodados (el mejor de la tabla contra el peor, RN-005) o anunciar al campeón.
+ */
+export function siguientePaso(t: Torneo, tabla: FilaTabla[], llaves: Llave[]): PasoLiguilla {
+  const ultima = [...RONDAS].reverse().find((r) => llaves.some((l) => l.ronda === r.id))?.id
+  if (!ultima) {
+    if (t.equipos.length < CLASIFICADOS) return { tipo: 'imposible', motivo: `Se necesitan al menos ${CLASIFICADOS} equipos.` }
+    const pendientes = t.partidos.filter((p) => p.fase === 'regular' && !estaPublicado(p)).length
+    return { tipo: 'generar', ronda: 'cuartos', cruces: cruzar(sembrar(tabla, CLASIFICADOS)), pendientes }
+  }
+  const actuales = llaves.filter((l) => l.ronda === ultima)
+  const faltan = actuales.filter((l) => !l.ganador).length
+  if (faltan) return { tipo: 'esperar', ronda: ultima, faltan }
+  const ganadores = actuales.map((l) => l.ganador!)
+  if (ultima === 'final') return { tipo: 'campeon', campeon: ganadores[0] }
+  const siguiente: Ronda = ultima === 'cuartos' ? 'semifinal' : 'final'
+  return { tipo: 'generar', ronda: siguiente, cruces: cruzar(ganadores), pendientes: 0 }
+}
+
+/** Ida en casa del peor colocado y vuelta en casa del mejor; la fecha y la cancha se ponen después. */
+export function partidosDeRonda(ronda: Ronda, cruces: [Sembrado, Sembrado][], nuevoId: () => string): Partido[] {
+  return cruces.flatMap(([alto, bajo], i) =>
+    (['ida', 'vuelta'] as const).map(
+      (vuelta): Partido => ({
+        id: nuevoId(),
+        fase: 'liguilla',
+        ronda,
+        llave: i + 1,
+        vuelta,
+        fecha: '',
+        cancha: '',
+        localId: vuelta === 'ida' ? bajo.equipo.id : alto.equipo.id,
+        visitanteId: vuelta === 'ida' ? alto.equipo.id : bajo.equipo.id,
+        estado: 'programado',
+        eventos: [],
+      }),
+    ),
+  )
+}
+
+/** En la vuelta de la final: el global antes de los penales, contando la ida publicada y el marcador dado de la vuelta. */
+export function globalFinal(t: Torneo, vuelta: Partido, golesVuelta: { local: number; visitante: number }) {
+  const ida = t.partidos.find((p) => p.fase === 'liguilla' && p.ronda === 'final' && p.vuelta === 'ida' && p.llave === vuelta.llave)
+  if (!ida || !estaPublicado(ida)) return null
+  return {
+    local: golesDe(ida, vuelta.localId).aFavor + golesVuelta.local,
+    visitante: golesDe(ida, vuelta.visitanteId).aFavor + golesVuelta.visitante,
+  }
+}

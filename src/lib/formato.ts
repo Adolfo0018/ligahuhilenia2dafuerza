@@ -1,4 +1,4 @@
-import type { Jugador, Liga, Posicion, RolCuerpoTecnico, Torneo } from '../types'
+import type { Jugador, Liga, Partido, Posicion, RolCuerpoTecnico, Torneo } from '../types'
 
 export const ROLES_CUERPO_TECNICO: Record<RolCuerpoTecnico, string> = {
   tecnico: 'Director técnico',
@@ -67,4 +67,12 @@ export function nombreLiga(l: Liga): string {
 
 export function nombreTorneo(t: Torneo): string {
   return `${t.tipo === 'liga' ? 'Liga' : 'Copa'} · ${t.nombre}`
+}
+
+const NOMBRE_RONDA: Record<string, string> = { cuartos: 'Cuartos', semifinal: 'Semifinal', final: 'Final' }
+
+/** "J5" en la fase regular; "Cuartos · ida" o "Final · vuelta" en la liguilla. */
+export function etiquetaPartido(p: Pick<Partido, 'jornada' | 'ronda' | 'vuelta'>): string {
+  if (p.jornada) return `J${p.jornada}`
+  return [p.ronda ? NOMBRE_RONDA[p.ronda] : 'Liguilla', p.vuelta].filter(Boolean).join(' · ')
 }

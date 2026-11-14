@@ -722,3 +722,48 @@ img.acceso-logo {
 .importar-igual {
   opacity: 0.6;
 }
+
+/* ---------- Liguilla ---------- */
+
+.llaves-admin {
+  display: grid;
+  gap: 18px;
+}
+
+.llave-admin {
+  display: grid;
+  gap: 8px;
+}
+
+.llave-admin-titulo {
+  display: grid;
+  gap: 2px;
+}
+
+.cruces {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cruces li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.equipo-sembrado {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.casilla-te {
+  flex: none;
+  gap: 4px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}

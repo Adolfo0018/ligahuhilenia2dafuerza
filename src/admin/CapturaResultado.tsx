@@ -3,6 +3,7 @@ import { Escudo } from '../components/Escudo'
 import { useTorneo } from '../lib/contexto'
 import { cerrarCapturas, reabrirCapturas } from '../lib/delegados'
 import { suspendidosEn } from '../lib/estadisticas'
+import { globalFinal } from '../lib/liguilla'
 import { etiquetaJugador, porNumero } from '../lib/formato'
 import { estaPublicado, marcador } from '../lib/partidos'
 import { modificarTorneo } from '../lib/repositorio'
@@ -55,9 +56,11 @@ interface Props {
   eventosIniciales?: Evento[]
   /** Ids de las capturas de los delegados: se cierran al publicar y se reabren al quitar el resultado. */
   capturas?: string[]
+  /** Penales que capturó cada delegado en la vuelta de la final (RF-023). */
+  penalesIniciales?: { local?: number; visitante?: number }
 }
 
-export function CapturaResultado({ partido, onListo, eventosIniciales, capturas = [] }: Props) {
+export function CapturaResultado({ partido, onListo, eventosIniciales, capturas = [], penalesIniciales }: Props) {
   const { torneo, equipo } = useTorneo()
   const iniciales = eventosIniciales ?? partido.eventos
   const [goles, setGoles] = useState(() => iniciales.filter((e): e is Gol => e.tipo === 'gol').map(conClave))
@@ -70,15 +73,33 @@ export function CapturaResultado({ partido, onListo, eventosIniciales, capturas 
     ? { ...partido, estado: 'administrativo', administrativo, eventos: [] }
     : { ...partido, estado: 'finalizado', eventos: goles.map((g) => g.evento) }
   const m = marcador(borrador)
+  // Vuelta de la final: si el global queda empatado tras el tiempo extra, se capturan los penales (RN-015).
+  const esVueltaFinal = partido.fase === 'liguilla' && partido.ronda === 'final' && partido.vuelta === 'vuelta'
+  const [penales, setPenales] = useState({
+    local: String(partido.penales?.local ?? penalesIniciales?.local ?? ''),
+    visitante: String(partido.penales?.visitante ?? penalesIniciales?.visitante ?? ''),
+  })
+  const global = esVueltaFinal && !administrativo ? globalFinal(torneo, partido, m) : null
+  const empateGlobal = !!global && global.local === global.visitante
 
   async function publicar() {
     // Un gol puede quedar sin autor (por ejemplo, un resultado anterior del que solo se conoce el marcador).
     if (tarjetas.some((t) => !t.evento.jugadorId)) return fallar('Elige a qué jugador es cada tarjeta.')
     if (administrativo && !administrativo.motivo.trim()) return fallar('Escribe el motivo del resultado administrativo.')
+    let tanda: Partido['penales']
+    if (empateGlobal) {
+      const local = Number(penales.local)
+      const visitante = Number(penales.visitante)
+      if (penales.local === '' || penales.visitante === '' || !Number.isInteger(local) || !Number.isInteger(visitante) || local < 0 || visitante < 0)
+        return fallar('El global quedó empatado: escribe los penales que anotó cada equipo.')
+      if (local === visitante) return fallar('Los penales no pueden quedar empatados.')
+      tanda = { local, visitante }
+    }
     const conTarjetas = normalizarTarjetas(tarjetas.map((t) => t.evento))
     const cambio: Partial<Partido> = administrativo
       ? { estado: 'administrativo', administrativo: { ...administrativo, motivo: administrativo.motivo.trim() }, eventos: conTarjetas }
       : { estado: 'finalizado', administrativo: undefined, eventos: [...goles.map((g) => g.evento), ...conTarjetas] }
+    cambio.penales = tanda
     const ok = await guardar(async () => {
       await modificarTorneo(torneo.id, (t) => ({
         partidos: t.partidos.map((p) => (p.id === partido.id ? { ...p, ...cambio } : p)),
@@ -92,7 +113,7 @@ export function CapturaResultado({ partido, onListo, eventosIniciales, capturas 
     if (!window.confirm('¿Quitar el resultado? El partido vuelve a programado y sale de la tabla y las estadísticas.')) return
     const ok = await guardar(async () => {
       await modificarTorneo(torneo.id, (t) => ({
-        partidos: t.partidos.map((p) => (p.id === partido.id ? { ...p, estado: 'programado', eventos: [], administrativo: undefined } : p)),
+        partidos: t.partidos.map((p) => (p.id === partido.id ? { ...p, estado: 'programado', eventos: [], administrativo: undefined, penales: undefined } : p)),
       }))
       await reabrirCapturas(capturas)
     }, 'Resultado quitado')
@@ -149,9 +170,36 @@ export function CapturaResultado({ partido, onListo, eventosIniciales, capturas 
             onGoles={setGoles}
             onTarjetas={setTarjetas}
             sinGoles={!!administrativo}
+            tiempoExtra={esVueltaFinal}
           />
         ))}
       </div>
+      {esVueltaFinal && !administrativo && !global && (
+        <p className="nota">Publica primero la ida de la final; con ella se calcula el global y se sabe si hay penales.</p>
+      )}
+      {global && (
+        <p className="nota">
+          Global con la ida: <strong>{global.local}-{global.visitante}</strong>
+          {empateGlobal ? ' · empatado: escribe el resultado de la tanda de penales.' : '.'}
+        </p>
+      )}
+      {empateGlobal && (
+        <div className="campos">
+          {(['local', 'visitante'] as const).map((lado) => (
+            <label key={lado} className="campo campo-corto">
+              <span>Penales de {equipo(lado === 'local' ? partido.localId : partido.visitanteId).nombre}</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={30}
+                value={penales[lado]}
+                onChange={(e) => setPenales({ ...penales, [lado]: e.target.value })}
+              />
+            </label>
+          ))}
+        </div>
+      )}
       <p className="nota">
         {administrativo
           ? 'Los goles del 2-0 no se le cuentan a ningún jugador. Las tarjetas sí se guardan.'
@@ -181,13 +229,15 @@ interface PropsColumna {
   partido: Partido
   /** En un resultado administrativo solo se capturan tarjetas. */
   sinGoles?: boolean
+  /** En la vuelta de la final cada gol puede marcarse como de tiempo extra (RN-015). */
+  tiempoExtra?: boolean
   goles: Renglon<Gol>[]
   tarjetas: Renglon<Tarjeta>[]
   onGoles: (goles: Renglon<Gol>[]) => void
   onTarjetas: (tarjetas: Renglon<Tarjeta>[]) => void
 }
 
-export function ColumnaEquipo({ equipoId, partido, sinGoles, goles, tarjetas, onGoles, onTarjetas }: PropsColumna) {
+export function ColumnaEquipo({ equipoId, partido, sinGoles, tiempoExtra, goles, tarjetas, onGoles, onTarjetas }: PropsColumna) {
   const { torneo, equipo } = useTorneo()
   const plantel = torneo.jugadores.filter((j) => j.equipoId === equipoId).sort(porNumero)
   const suspendidos = suspendidosEn(torneo, partido)
@@ -253,6 +303,16 @@ export function ColumnaEquipo({ equipoId, partido, sinGoles, goles, tarjetas, on
                     </option>
                   ))}
               </select>
+            )}
+            {tiempoExtra && (
+              <label className="casilla casilla-te" title="Gol en tiempo extra">
+                <input
+                  type="checkbox"
+                  checked={!!evento.tiempoExtra}
+                  onChange={(e) => cambiarGol(clave, { tiempoExtra: e.target.checked || undefined })}
+                />
+                TE
+              </label>
             )}
             <button type="button" className="boton-quitar" aria-label="Quitar gol" onClick={() => onGoles(goles.filter((g) => g.clave !== clave))}>
               ✕

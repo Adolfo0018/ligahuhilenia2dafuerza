@@ -14,7 +14,7 @@ import {
   venceCaptura,
   yaSeJugo,
 } from '../lib/delegados'
-import { fechaCorta, POSICIONES } from '../lib/formato'
+import { fechaCorta, POSICIONES, etiquetaPartido } from '../lib/formato'
 import { estaPublicado } from '../lib/partidos'
 import { modificarTorneo } from '../lib/repositorio'
 import type { Captura, Partido, Solicitud, Torneo, Usuario } from '../types'
@@ -111,7 +111,7 @@ function RevisionPartido({ partido, capturas }: { partido: Partido; capturas: Ca
     <div className="tarjeta tarjeta-partido-admin">
       <div className="partido-meta">
         <span className="partido-cuando">
-          J{partido.jornada} · {fechaCorta(partido.fecha)}
+          {etiquetaPartido(partido)} · {fechaCorta(partido.fecha)}
         </span>
       </div>
       {[partido.localId, partido.visitanteId].map((id) => {
@@ -158,7 +158,7 @@ function AlertaPlazo({ partido, capturas }: { partido: Partido; capturas: Captur
     <div className="tarjeta tarjeta-partido-admin">
       <div className="partido-meta">
         <span className="partido-cuando">
-          J{partido.jornada} · {fechaCorta(partido.fecha)} · {equipo(partido.localId).nombre} vs {equipo(partido.visitanteId).nombre}
+          {etiquetaPartido(partido)} · {fechaCorta(partido.fecha)} · {equipo(partido.localId).nombre} vs {equipo(partido.visitanteId).nombre}
         </span>
         <span className="insignia insignia-aplazado">Plazo vencido</span>
       </div>
@@ -174,7 +174,7 @@ function AlertaPlazo({ partido, capturas }: { partido: Partido; capturas: Captur
             className="boton-enlace"
             onClick={() => {
               setSancionando(id)
-              setDescripcion(`Captura tardía de la jornada ${partido.jornada}`)
+              setDescripcion(`Captura tardía: ${etiquetaPartido(partido)}`)
             }}
           >
             Registrar sanción

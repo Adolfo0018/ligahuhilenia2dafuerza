@@ -94,7 +94,7 @@ export function useCapturas(torneoId: string | undefined, equipoId?: string) {
   return useConsulta('capturas', torneoId ? { torneoId, ...(equipoId && { equipoId }) } : null, aCaptura)
 }
 
-export async function guardarCaptura(datos: { torneoId: string; partidoId: string; equipoId: string; eventos: Evento[]; enviadoPor: string }) {
+export async function guardarCaptura(datos: { torneoId: string; partidoId: string; equipoId: string; eventos: Evento[]; enviadoPor: string; penales?: number }) {
   await setDoc(doc(base(), 'capturas', idCaptura(datos.torneoId, datos.partidoId, datos.equipoId)), {
     ...datos,
     cerrada: false,

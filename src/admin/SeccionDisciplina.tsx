@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Escudo } from '../components/Escudo'
 import { useTorneo } from '../lib/contexto'
 import { rojasSinSuspension } from '../lib/estadisticas'
-import { fechaCorta, fechaSinHora, porNumero, etiquetaJugador } from '../lib/formato'
+import { fechaCorta, fechaSinHora, porNumero, etiquetaJugador, etiquetaPartido } from '../lib/formato'
 import { estaPublicado, juegaEn, porFecha } from '../lib/partidos'
 import { modificarTorneo } from '../lib/repositorio'
 import type { Partido, Suspension, Torneo } from '../types'
@@ -41,7 +41,7 @@ export function SeccionDisciplina() {
 
 function descripcionPartido(p: Partido, equipoId: string, nombre: (id: string) => string): string {
   const rival = p.localId === equipoId ? p.visitanteId : p.localId
-  const cuando = p.jornada ? `J${p.jornada}` : p.ronda ? p.ronda : ''
+  const cuando = etiquetaPartido(p)
   return `${cuando} vs ${nombre(rival)}${p.fecha ? ` · ${fechaCorta(p.fecha)}` : ''}`
 }
 

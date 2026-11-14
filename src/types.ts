@@ -144,6 +144,8 @@ export interface Captura {
   partidoId: string
   equipoId: string
   eventos: Evento[]
+  /** Solo en la vuelta de la final: penales que anotó el equipo en la tanda, si la hubo (RF-023). */
+  penales?: number
   /** Al publicarse el partido se cierra y el delegado ya no la puede cambiar (RN-013). */
   cerrada: boolean
   enviadoPor: string

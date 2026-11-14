@@ -14,7 +14,7 @@ import {
   venceCaptura,
   yaSeJugo,
 } from '../lib/delegados'
-import { fechaCorta, iniciales, nombreLiga, nombreTorneo, POSICIONES, porNumero } from '../lib/formato'
+import { fechaCorta, iniciales, nombreLiga, nombreTorneo, POSICIONES, porNumero, etiquetaPartido } from '../lib/formato'
 import { estaPublicado, juegaEn, marcador, porFecha } from '../lib/partidos'
 import { auth } from '../lib/sesion'
 import { useTorneos } from '../lib/torneos'
@@ -145,7 +145,7 @@ function TarjetaPartidoDelegado({ partido, captura, onCapturar }: { partido: Par
     <div className="tarjeta tarjeta-partido-admin">
       <div className="partido-meta">
         <span className="partido-cuando">
-          J{partido.jornada} · {fechaCorta(partido.fecha)}
+          {etiquetaPartido(partido)} · {fechaCorta(partido.fecha)}
           {partido.cancha && ` · ${partido.cancha}`}
         </span>
         <span className={`insignia insignia-${publicado ? 'finalizado' : captura ? 'revision' : vencido ? 'aplazado' : 'programado'}`}>
@@ -184,13 +184,26 @@ function CapturaDelegado({ partido, equipo, uid, captura, onListo }: {
   const [tarjetas, setTarjetas] = useState(() => iniciales.filter((e): e is Tarjeta => e.tipo !== 'gol').map(conClave))
   const { guardar, fallar, guardando, aviso } = useGuardado()
   const rival = partido.localId === equipo.id ? partido.visitanteId : partido.localId
+  // En la vuelta de la final el delegado marca los goles del tiempo extra y los penales de su equipo (RF-023).
+  const esVueltaFinal = partido.fase === 'liguilla' && partido.ronda === 'final' && partido.vuelta === 'vuelta'
+  const [penales, setPenales] = useState(captura?.penales !== undefined ? String(captura.penales) : '')
 
   async function enviar() {
     if (goles.some((g) => !g.evento.jugadorId && !g.evento.autogol)) return fallar('Elige quién anotó cada gol.')
     if (tarjetas.some((t) => !t.evento.jugadorId)) return fallar('Elige a qué jugador es cada tarjeta.')
+    const tanda = penales.trim() === '' ? undefined : Number(penales)
+    if (tanda !== undefined && (!Number.isInteger(tanda) || tanda < 0 || tanda > 30)) return fallar('Los penales deben ser un número de 0 a 30.')
     const eventos: Evento[] = [...goles.map((g) => g.evento), ...normalizarTarjetas(tarjetas.map((t) => t.evento))]
     const ok = await guardar(
-      () => guardarCaptura({ torneoId: torneo.id, partidoId: partido.id, equipoId: equipo.id, eventos, enviadoPor: uid }),
+      () =>
+        guardarCaptura({
+          torneoId: torneo.id,
+          partidoId: partido.id,
+          equipoId: equipo.id,
+          eventos,
+          enviadoPor: uid,
+          ...(esVueltaFinal && tanda !== undefined && { penales: tanda }),
+        }),
       'Captura enviada al administrador',
     )
     if (ok) onListo()
@@ -203,9 +216,24 @@ function CapturaDelegado({ partido, equipo, uid, captura, onListo }: {
         Registra solo los goles, asistencias y tarjetas de tu equipo. El delegado de {torneo.equipos.find((e) => e.id === rival)?.nombre}{' '}
         captura los suyos y el administrador publica el resultado. Un autogol del rival cuenta como “Autogol a favor”.
       </p>
-      <ColumnaEquipo equipoId={equipo.id} partido={partido} goles={goles} tarjetas={tarjetas} onGoles={setGoles} onTarjetas={setTarjetas} />
+      <ColumnaEquipo
+        equipoId={equipo.id}
+        partido={partido}
+        goles={goles}
+        tarjetas={tarjetas}
+        onGoles={setGoles}
+        onTarjetas={setTarjetas}
+        tiempoExtra={esVueltaFinal}
+      />
+      {esVueltaFinal && (
+        <label className="campo campo-corto">
+          <span>Penales anotados por tu equipo en la tanda (déjalo vacío si no hubo)</span>
+          <input type="number" inputMode="numeric" min={0} max={30} value={penales} onChange={(e) => setPenales(e.target.value)} />
+        </label>
+      )}
       <p className="nota">
         Goles de tu equipo: <strong>{goles.length}</strong>. Dos amarillas al mismo jugador se guardan como 1 amarilla y 1 roja.
+        {esVueltaFinal && ' Marca “TE” en los goles del tiempo extra.'}
       </p>
       {aviso}
       <div className="acciones">

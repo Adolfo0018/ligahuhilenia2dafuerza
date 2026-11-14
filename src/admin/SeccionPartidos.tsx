@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Escudo } from '../components/Escudo'
+import { Segmentado } from '../components/Segmentado'
 import { useTorneo } from '../lib/contexto'
 import { eventosDeCapturas, useCapturas } from '../lib/delegados'
 import { fechaCorta } from '../lib/formato'
@@ -8,6 +9,7 @@ import { modificarTorneo } from '../lib/repositorio'
 import type { Captura, EstadoPartido, Partido } from '../types'
 import { CapturaResultado } from './CapturaResultado'
 import { ImportarCalendario } from './ImportarCalendario'
+import { SeccionLiguilla } from './SeccionLiguilla'
 import { useGuardado } from './useGuardado'
 import { nuevoId } from './utilidades'
 
@@ -20,6 +22,25 @@ const ESTADOS: Record<EstadoPartido, string> = {
 }
 
 export function SeccionPartidos() {
+  const { torneo } = useTorneo()
+  const [fase, setFase] = useState<'regular' | 'liguilla'>(() => (torneo.estado === 'regular' ? 'regular' : 'liguilla'))
+  return (
+    <>
+      <Segmentado
+        etiqueta="Fase"
+        opciones={[
+          { id: 'regular', nombre: 'Fase regular' },
+          { id: 'liguilla', nombre: 'Liguilla' },
+        ]}
+        valor={fase}
+        onCambiar={setFase}
+      />
+      {fase === 'regular' ? <FaseRegular /> : <SeccionLiguilla />}
+    </>
+  )
+}
+
+function FaseRegular() {
   const { torneo } = useTorneo()
   const regulares = torneo.partidos.filter((p) => p.fase === 'regular')
   // Todos contra todos a una vuelta: con número impar de equipos hay tantas jornadas como equipos (RN-012).
@@ -103,7 +124,7 @@ export function SeccionPartidos() {
   )
 }
 
-function TarjetaPartidoAdmin({ partido, capturas }: { partido: Partido; capturas: Captura[] }) {
+export function TarjetaPartidoAdmin({ partido, capturas }: { partido: Partido; capturas: Captura[] }) {
   const { torneo, equipo } = useTorneo()
   const [modo, setModo] = useState<'ver' | 'editar' | 'resultado'>('ver')
   const { guardar, aviso } = useGuardado()
@@ -136,6 +157,14 @@ function TarjetaPartidoAdmin({ partido, capturas }: { partido: Partido; capturas
         partido={partido}
         eventosIniciales={usarCapturas ? eventosDeCapturas(capturas) : undefined}
         capturas={capturas.map((c) => c.id)}
+        penalesIniciales={
+          usarCapturas
+            ? {
+                local: capturas.find((c) => c.equipoId === partido.localId)?.penales,
+                visitante: capturas.find((c) => c.equipoId === partido.visitanteId)?.penales,
+              }
+            : undefined
+        }
         onListo={() => setModo('ver')}
       />
     )
@@ -145,6 +174,7 @@ function TarjetaPartidoAdmin({ partido, capturas }: { partido: Partido; capturas
     <div className="tarjeta tarjeta-partido-admin">
       <div className="partido-meta">
         <span className="partido-cuando">
+          {partido.fase === 'liguilla' && `${partido.vuelta === 'ida' ? 'Ida' : 'Vuelta'} · `}
           {fechaCorta(partido.fecha)} · {partido.cancha || 'Cancha por definir'}
         </span>
         <span className={`insignia insignia-${partido.estado}`}>{ESTADOS[partido.estado]}</span>
@@ -174,9 +204,12 @@ function TarjetaPartidoAdmin({ partido, capturas }: { partido: Partido; capturas
             Aplazar
           </button>
         )}
-        <button type="button" className="boton boton-chico boton-peligro-texto" onClick={borrar}>
-          Borrar
-        </button>
+        {/* En la liguilla se borra la ronda completa, no un partido suelto. */}
+        {partido.fase !== 'liguilla' && (
+          <button type="button" className="boton boton-chico boton-peligro-texto" onClick={borrar}>
+            Borrar
+          </button>
+        )}
       </div>
     </div>
   )
@@ -191,12 +224,27 @@ function FormPartido({ partido, jornadaInicial, onListo }: { partido?: Partido; 
   const [visitanteId, setVisitanteId] = useState(partido?.visitanteId ?? '')
   const { guardar, fallar, guardando, aviso } = useGuardado()
   // Con resultado ya capturado no se cambian los equipos: los goles y tarjetas son de esos jugadores.
-  const equiposFijos = !!partido && (estaPublicado(partido) || partido.eventos.length > 0)
+  const esLiguilla = partido?.fase === 'liguilla'
+  // En la liguilla los equipos y la jornada los define la llave.
+  const equiposFijos = !!partido && (esLiguilla || estaPublicado(partido) || partido.eventos.length > 0)
   const canchas = [...new Set(torneo.partidos.map((p) => p.cancha).filter(Boolean))].sort()
   const equipos = [...torneo.equipos].sort((a, b) => a.nombre.localeCompare(b.nombre))
 
   async function enviar(e: FormEvent) {
     e.preventDefault()
+    if (esLiguilla) {
+      const ok = await guardar(
+        () =>
+          modificarTorneo(torneo.id, (t) => ({
+            partidos: t.partidos.map((p) =>
+              p.id === partido!.id ? { ...p, fecha, cancha: cancha.trim(), estado: p.estado === 'aplazado' && fecha ? 'programado' : p.estado } : p,
+            ),
+          })),
+        'Partido actualizado',
+      )
+      if (ok) onListo()
+      return
+    }
     const j = Number(jornada)
     if (!Number.isInteger(j) || j < 1 || j > 60) return fallar('La jornada debe ser un número de 1 a 60.')
     if (!localId || !visitanteId) return fallar('Elige a los dos equipos.')
@@ -252,10 +300,12 @@ function FormPartido({ partido, jornadaInicial, onListo }: { partido?: Partido; 
             ))}
           </select>
         </label>
+        {!esLiguilla && (
         <label className="campo campo-corto">
           <span>Jornada</span>
           <input type="number" inputMode="numeric" min={1} max={60} value={jornada} onChange={(e) => setJornada(e.target.value)} required />
         </label>
+        )}
         <label className="campo">
           <span>Fecha y hora</span>
           <input type="datetime-local" value={fecha} onChange={(e) => setFecha(e.target.value)} />

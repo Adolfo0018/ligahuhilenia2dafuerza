@@ -72,7 +72,8 @@ service cloud.firestore {
       allow read: if esAdmin() || (request.auth != null && esDelegadoDe(resource.data.equipoId));
       allow create, update: if esDelegadoDe(request.resource.data.equipoId)
         && capturaId == request.resource.data.torneoId + '_' + request.resource.data.partidoId + '_' + request.resource.data.equipoId
-        && request.resource.data.keys().hasOnly(['torneoId', 'partidoId', 'equipoId', 'eventos', 'cerrada', 'enviadoPor', 'enviadoEn'])
+        && request.resource.data.keys().hasOnly(['torneoId', 'partidoId', 'equipoId', 'eventos', 'penales', 'cerrada', 'enviadoPor', 'enviadoEn'])
+        && (!('penales' in request.resource.data) || (request.resource.data.penales is int && request.resource.data.penales >= 0 && request.resource.data.penales <= 30))
         && request.resource.data.cerrada == false
         && request.resource.data.enviadoPor == request.auth.uid
         && request.resource.data.enviadoEn == request.time
