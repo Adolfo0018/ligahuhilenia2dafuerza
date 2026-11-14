@@ -122,3 +122,46 @@ export function suspendidos(t: Torneo): Suspendido[] {
   }
   return lista.sort((a, b) => b.faltan - a.faltan || a.jugador.nombre.localeCompare(b.jugador.nombre))
 }
+
+/**
+ * Jugadores que estaban suspendidos para un partido: su suspensión empezó antes y su equipo no había
+ * jugado todavía los partidos que le tocaban. Sirve para avisar al capturar (RN-010); no bloquea nada.
+ */
+export function suspendidosEn(t: Torneo, partido: Partido): Set<string> {
+  if (!partido.fecha) return new Set(suspendidos(t).map((s) => s.jugador.id))
+  const jugadores = new Map(t.jugadores.map((j) => [j.id, j]))
+  const partidos = new Map(t.partidos.map((p) => [p.id, p]))
+  const ids = new Set<string>()
+  for (const s of t.suspensiones) {
+    const jugador = jugadores.get(s.jugadorId)
+    const origen = partidos.get(s.partidoId)
+    if (!jugador || !origen || origen.id === partido.id || !origen.fecha || origen.fecha >= partido.fecha) continue
+    const cumplidos = t.partidos.filter(
+      (p) => estaPublicado(p) && p.id !== partido.id && p.fecha > origen.fecha && p.fecha < partido.fecha && juegaEn(p, jugador.equipoId),
+    ).length
+    if (cumplidos < s.partidos) ids.add(jugador.id)
+  }
+  return ids
+}
+
+export interface RojaPendiente {
+  partido: Partido
+  jugador: Jugador
+  dobleAmarilla: boolean
+}
+
+/** Rojas de partidos publicados a las que el administrador todavía no les asigna suspensión (RF-019). */
+export function rojasSinSuspension(t: Torneo): RojaPendiente[] {
+  if (t.estado === 'terminado') return []
+  const jugadores = new Map(t.jugadores.map((j) => [j.id, j]))
+  const conSuspension = new Set(t.suspensiones.map((s) => `${s.partidoId}_${s.jugadorId}`))
+  const lista: RojaPendiente[] = []
+  for (const p of t.partidos.filter(estaPublicado).sort(porFecha)) {
+    for (const e of p.eventos) {
+      if (e.tipo !== 'roja' || conSuspension.has(`${p.id}_${e.jugadorId}`)) continue
+      const jugador = jugadores.get(e.jugadorId)
+      if (jugador) lista.push({ partido: p, jugador, dobleAmarilla: !!e.dobleAmarilla })
+    }
+  }
+  return lista
+}

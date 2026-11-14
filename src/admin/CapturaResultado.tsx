@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Escudo } from '../components/Escudo'
 import { useTorneo } from '../lib/contexto'
 import { cerrarCapturas, reabrirCapturas } from '../lib/delegados'
+import { suspendidosEn } from '../lib/estadisticas'
 import { etiquetaJugador, porNumero } from '../lib/formato'
 import { estaPublicado, marcador } from '../lib/partidos'
 import { modificarTorneo } from '../lib/repositorio'
@@ -57,22 +58,30 @@ interface Props {
 }
 
 export function CapturaResultado({ partido, onListo, eventosIniciales, capturas = [] }: Props) {
-  const { torneo } = useTorneo()
+  const { torneo, equipo } = useTorneo()
   const iniciales = eventosIniciales ?? partido.eventos
   const [goles, setGoles] = useState(() => iniciales.filter((e): e is Gol => e.tipo === 'gol').map(conClave))
   const [tarjetas, setTarjetas] = useState(() => iniciales.filter((e): e is Tarjeta => e.tipo !== 'gol').map(conClave))
   const { guardar, fallar, guardando, aviso } = useGuardado()
+  // Resultado administrativo: gana 2-0 el rival del responsable y no se cuentan goles a nadie (RN-007).
+  const [administrativo, setAdministrativo] = useState(partido.administrativo ?? null)
   const publicado = estaPublicado(partido)
-  const borrador: Partido = { ...partido, estado: 'finalizado', eventos: goles.map((g) => g.evento) }
+  const borrador: Partido = administrativo
+    ? { ...partido, estado: 'administrativo', administrativo, eventos: [] }
+    : { ...partido, estado: 'finalizado', eventos: goles.map((g) => g.evento) }
   const m = marcador(borrador)
 
   async function publicar() {
     // Un gol puede quedar sin autor (por ejemplo, un resultado anterior del que solo se conoce el marcador).
     if (tarjetas.some((t) => !t.evento.jugadorId)) return fallar('Elige a qué jugador es cada tarjeta.')
-    const eventos: Evento[] = [...goles.map((g) => g.evento), ...normalizarTarjetas(tarjetas.map((t) => t.evento))]
+    if (administrativo && !administrativo.motivo.trim()) return fallar('Escribe el motivo del resultado administrativo.')
+    const conTarjetas = normalizarTarjetas(tarjetas.map((t) => t.evento))
+    const cambio: Partial<Partido> = administrativo
+      ? { estado: 'administrativo', administrativo: { ...administrativo, motivo: administrativo.motivo.trim() }, eventos: conTarjetas }
+      : { estado: 'finalizado', administrativo: undefined, eventos: [...goles.map((g) => g.evento), ...conTarjetas] }
     const ok = await guardar(async () => {
       await modificarTorneo(torneo.id, (t) => ({
-        partidos: t.partidos.map((p) => (p.id === partido.id ? { ...p, estado: 'finalizado', eventos } : p)),
+        partidos: t.partidos.map((p) => (p.id === partido.id ? { ...p, ...cambio } : p)),
       }))
       await cerrarCapturas(capturas)
     }, 'Resultado publicado')
@@ -83,7 +92,7 @@ export function CapturaResultado({ partido, onListo, eventosIniciales, capturas 
     if (!window.confirm('¿Quitar el resultado? El partido vuelve a programado y sale de la tabla y las estadísticas.')) return
     const ok = await guardar(async () => {
       await modificarTorneo(torneo.id, (t) => ({
-        partidos: t.partidos.map((p) => (p.id === partido.id ? { ...p, estado: 'programado', eventos: [] } : p)),
+        partidos: t.partidos.map((p) => (p.id === partido.id ? { ...p, estado: 'programado', eventos: [], administrativo: undefined } : p)),
       }))
       await reabrirCapturas(capturas)
     }, 'Resultado quitado')
@@ -98,19 +107,56 @@ export function CapturaResultado({ partido, onListo, eventosIniciales, capturas 
         <span aria-hidden="true">–</span>
         <span>{m.visitante}</span>
       </div>
+      <label className="casilla">
+        <input
+          type="checkbox"
+          checked={!!administrativo}
+          onChange={(e) => setAdministrativo(e.target.checked ? { responsableId: partido.localId, motivo: '' } : null)}
+        />
+        Resultado administrativo (2-0)
+      </label>
+      {administrativo && (
+        <div className="campos">
+          <label className="campo">
+            <span>Equipo responsable (pierde 2-0)</span>
+            <select value={administrativo.responsableId} onChange={(e) => setAdministrativo({ ...administrativo, responsableId: e.target.value })}>
+              {[partido.localId, partido.visitanteId].map((id) => (
+                <option key={id} value={id}>
+                  {equipo(id).nombre}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="campo">
+            <span>Motivo</span>
+            <input
+              value={administrativo.motivo}
+              onChange={(e) => setAdministrativo({ ...administrativo, motivo: e.target.value })}
+              maxLength={80}
+              placeholder="Ej. No se presentó"
+            />
+          </label>
+        </div>
+      )}
       <div className="captura-equipos">
         {[partido.localId, partido.visitanteId].map((equipoId) => (
           <ColumnaEquipo
             key={equipoId}
             equipoId={equipoId}
+            partido={partido}
             goles={goles}
             tarjetas={tarjetas}
             onGoles={setGoles}
             onTarjetas={setTarjetas}
+            sinGoles={!!administrativo}
           />
         ))}
       </div>
-      <p className="nota">Dos amarillas al mismo jugador se guardan como 1 amarilla y 1 roja por doble amarilla.</p>
+      <p className="nota">
+        {administrativo
+          ? 'Los goles del 2-0 no se le cuentan a ningún jugador. Las tarjetas sí se guardan.'
+          : 'Dos amarillas al mismo jugador se guardan como 1 amarilla y 1 roja por doble amarilla.'}
+      </p>
       {aviso}
       <div className="acciones">
         <button type="button" className="boton" onClick={publicar} disabled={guardando}>
@@ -131,20 +177,32 @@ export function CapturaResultado({ partido, onListo, eventosIniciales, capturas 
 
 interface PropsColumna {
   equipoId: string
+  /** Para marcar a los jugadores que estaban suspendidos en ese partido (solo avisa, RN-010). */
+  partido: Partido
+  /** En un resultado administrativo solo se capturan tarjetas. */
+  sinGoles?: boolean
   goles: Renglon<Gol>[]
   tarjetas: Renglon<Tarjeta>[]
   onGoles: (goles: Renglon<Gol>[]) => void
   onTarjetas: (tarjetas: Renglon<Tarjeta>[]) => void
 }
 
-export function ColumnaEquipo({ equipoId, goles, tarjetas, onGoles, onTarjetas }: PropsColumna) {
+export function ColumnaEquipo({ equipoId, partido, sinGoles, goles, tarjetas, onGoles, onTarjetas }: PropsColumna) {
   const { torneo, equipo } = useTorneo()
   const plantel = torneo.jugadores.filter((j) => j.equipoId === equipoId).sort(porNumero)
+  const suspendidos = suspendidosEn(torneo, partido)
+  const etiqueta = (j: (typeof plantel)[number]) => etiquetaJugador(j) + (suspendidos.has(j.id) ? ' · SUSPENDIDO' : '')
   const opciones = plantel.map((j) => (
     <option key={j.id} value={j.id}>
-      {etiquetaJugador(j)}
+      {etiqueta(j)}
     </option>
   ))
+  const usados = new Set(
+    [...(sinGoles ? [] : goles), ...tarjetas]
+      .filter((r) => r.evento.equipoId === equipoId)
+      .flatMap((r) => [r.evento.jugadorId, r.evento.tipo === 'gol' ? r.evento.asistenciaId : undefined]),
+  )
+  const avisar = plantel.filter((j) => suspendidos.has(j.id) && usados.has(j.id))
 
   const cambiarGol = (clave: string, cambio: Partial<Gol>) =>
     onGoles(goles.map((g) => (g.clave === clave ? { ...g, evento: { ...g.evento, ...cambio } } : g)))
@@ -159,8 +217,8 @@ export function ColumnaEquipo({ equipoId, goles, tarjetas, onGoles, onTarjetas }
       </h4>
       {!plantel.length && <p className="nota">Este equipo no tiene jugadores; agrégalos en “Equipos y jugadores”.</p>}
 
-      <p className="captura-subtitulo">Goles</p>
-      {goles
+      {!sinGoles && <p className="captura-subtitulo">Goles</p>}
+      {!sinGoles && goles
         .filter((g) => g.evento.equipoId === equipoId)
         .map(({ clave, evento }) => (
           <div key={clave} className="captura-renglon">
@@ -191,7 +249,7 @@ export function ColumnaEquipo({ equipoId, goles, tarjetas, onGoles, onTarjetas }
                   .filter((j) => j.id !== evento.jugadorId)
                   .map((j) => (
                     <option key={j.id} value={j.id}>
-                      {etiquetaJugador(j)}
+                      {etiqueta(j)}
                     </option>
                   ))}
               </select>
@@ -201,9 +259,11 @@ export function ColumnaEquipo({ equipoId, goles, tarjetas, onGoles, onTarjetas }
             </button>
           </div>
         ))}
-      <button type="button" className="boton boton-chico boton-secundario" onClick={() => onGoles([...goles, conClave<Gol>({ tipo: 'gol', equipoId })])}>
-        + Gol
-      </button>
+      {!sinGoles && (
+        <button type="button" className="boton boton-chico boton-secundario" onClick={() => onGoles([...goles, conClave<Gol>({ tipo: 'gol', equipoId })])}>
+          + Gol
+        </button>
+      )}
 
       <p className="captura-subtitulo">Tarjetas</p>
       {tarjetas
@@ -244,6 +304,12 @@ export function ColumnaEquipo({ equipoId, goles, tarjetas, onGoles, onTarjetas }
       >
         + Tarjeta
       </button>
+      {avisar.length > 0 && (
+        <p className="mensaje mensaje-error" role="status">
+          {avisar.length === 1 ? `${avisar[0].nombre} estaba suspendido` : `${avisar.map((j) => j.nombre).join(', ')} estaban suspendidos`} para
+          este partido. Puedes guardar de todos modos.
+        </p>
+      )}
     </section>
   )
 }

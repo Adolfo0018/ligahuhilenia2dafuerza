@@ -6,21 +6,25 @@ import { ProveedorTorneo } from '../lib/contexto'
 import { iniciales, nombreLiga, nombreTorneo } from '../lib/formato'
 import { auth } from '../lib/sesion'
 import { useTorneos } from '../lib/torneos'
+import { rojasSinSuspension } from '../lib/estadisticas'
 import { NuevoTorneo } from './NuevoTorneo'
+import { SeccionDisciplina } from './SeccionDisciplina'
 import { SeccionEquipos } from './SeccionEquipos'
 import type { Torneo } from '../types'
 import { SeccionPartidos } from './SeccionPartidos'
 import { SeccionPendientes, usePendientes } from './SeccionPendientes'
 import { SeccionTorneo } from './SeccionTorneo'
 
-type Seccion = 'pendientes' | 'partidos' | 'equipos' | 'torneo'
+type Seccion = 'pendientes' | 'partidos' | 'disciplina' | 'equipos' | 'torneo'
 
 /** Secciones del torneo elegido; "Pendientes" muestra cuántas cosas esperan al administrador. */
 function ContenidoTorneo({ torneo, seccion, onSeccion }: { torneo: Torneo; seccion: Seccion; onSeccion: (s: Seccion) => void }) {
   const { total } = usePendientes(torneo)
+  const rojas = rojasSinSuspension(torneo).length
   const secciones: { id: Seccion; nombre: string }[] = [
     { id: 'pendientes', nombre: total ? `Pendientes (${total})` : 'Pendientes' },
     { id: 'partidos', nombre: 'Partidos' },
+    { id: 'disciplina', nombre: rojas ? `Disciplina (${rojas})` : 'Disciplina' },
     { id: 'equipos', nombre: 'Equipos y jugadores' },
     { id: 'torneo', nombre: 'Torneo' },
   ]
@@ -30,6 +34,7 @@ function ContenidoTorneo({ torneo, seccion, onSeccion }: { torneo: Torneo; secci
       <div className="admin-seccion">
         {seccion === 'pendientes' && <SeccionPendientes />}
         {seccion === 'partidos' && <SeccionPartidos />}
+        {seccion === 'disciplina' && <SeccionDisciplina />}
         {seccion === 'equipos' && <SeccionEquipos />}
         {seccion === 'torneo' && <SeccionTorneo />}
       </div>

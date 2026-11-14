@@ -203,7 +203,7 @@ function CapturaDelegado({ partido, equipo, uid, captura, onListo }: {
         Registra solo los goles, asistencias y tarjetas de tu equipo. El delegado de {torneo.equipos.find((e) => e.id === rival)?.nombre}{' '}
         captura los suyos y el administrador publica el resultado. Un autogol del rival cuenta como “Autogol a favor”.
       </p>
-      <ColumnaEquipo equipoId={equipo.id} goles={goles} tarjetas={tarjetas} onGoles={setGoles} onTarjetas={setTarjetas} />
+      <ColumnaEquipo equipoId={equipo.id} partido={partido} goles={goles} tarjetas={tarjetas} onGoles={setGoles} onTarjetas={setTarjetas} />
       <p className="nota">
         Goles de tu equipo: <strong>{goles.length}</strong>. Dos amarillas al mismo jugador se guardan como 1 amarilla y 1 roja.
       </p>

@@ -623,3 +623,14 @@ img.acceso-logo {
 .captura-columna > .boton {
   justify-self: start;
 }
+
+/* ---------- Disciplina ---------- */
+
+.ranking-admin li {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+}
+
+/* En las sanciones no hay columna de estado; el botón ocupa su lugar. */
+.ranking-admin li:has(> :nth-child(3):last-child) {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
