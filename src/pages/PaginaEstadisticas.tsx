@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Avatar } from '../components/Avatar'
 import { Escudo } from '../components/Escudo'
 import { Racha } from '../components/Racha'
 import { Segmentado } from '../components/Segmentado'
@@ -73,7 +74,11 @@ function Ranking({ filas, unidad }: { filas: FilaJugador[]; unidad: string }) {
           return (
             <li key={f.jugador.id}>
               <span className="ranking-lugar">{lugar}</span>
-              <Escudo equipo={eq} chico />
+              {/* Avatar del jugador con el escudo de su equipo como insignia. */}
+              <span className="avatar-con-escudo">
+                <Avatar nombre={f.jugador.nombre} color={eq?.color} />
+                {eq && <Escudo equipo={eq} chico />}
+              </span>
               <span className="ranking-quien">
                 <strong>{f.jugador.nombre}</strong>
                 <span>

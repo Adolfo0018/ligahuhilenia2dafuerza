@@ -1,3 +1,4 @@
+import { Avatar } from './Avatar'
 import { useState } from 'react'
 import { useTorneo } from '../lib/contexto'
 import { fechaCorta } from '../lib/formato'
@@ -94,7 +95,7 @@ function DetallePartido({ partido }: { partido: Partido }) {
       {[partido.localId, partido.visitanteId].map((id) => (
         <div key={id}>
           <p className="detalle-equipo">{equipo(id).nombre}</p>
-          <ListaEventos eventos={partido.eventos.filter((e) => e.equipoId === id)} />
+          <ListaEventos eventos={partido.eventos.filter((e) => e.equipoId === id)} color={equipo(id)?.color} />
         </div>
       ))}
     </div>
@@ -103,7 +104,7 @@ function DetallePartido({ partido }: { partido: Partido }) {
 
 const ORDEN: Record<Evento['tipo'], number> = { gol: 0, amarilla: 1, roja: 2 }
 
-function ListaEventos({ eventos }: { eventos: Evento[] }) {
+function ListaEventos({ eventos, color }: { eventos: Evento[]; color?: string }) {
   const { jugador } = useTorneo()
   const nombre = (id?: string) => (id && jugador(id)?.nombre) || 'Jugador'
   if (!eventos.length) return <p className="texto-suave">Sin goles ni tarjetas</p>
@@ -117,6 +118,7 @@ function ListaEventos({ eventos }: { eventos: Evento[] }) {
               <span className="icono-gol" aria-hidden="true">
                 ⚽
               </span>
+              {e.jugadorId && !e.autogol && <Avatar nombre={nombre(e.jugadorId)} color={color} chico />}
               <span>
                 {e.autogol ? 'Autogol a favor' : e.jugadorId ? nombre(e.jugadorId) : 'Gol sin autor registrado'}
                 {e.tiempoExtra && ' (tiempo extra)'}
@@ -130,6 +132,7 @@ function ListaEventos({ eventos }: { eventos: Evento[] }) {
                 role="img"
                 aria-label={e.tipo === 'amarilla' ? 'Tarjeta amarilla' : 'Tarjeta roja'}
               />
+              <Avatar nombre={nombre(e.jugadorId)} color={color} chico />
               <span>
                 {nombre(e.jugadorId)}
                 {e.tipo === 'roja' && e.dobleAmarilla && <span className="sub">Por doble amarilla</span>}

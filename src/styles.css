@@ -966,3 +966,81 @@ button.partido-cuerpo:hover {
 .pie a {
   color: inherit;
 }
+
+/* Escudo oficial: la imagen ocupa el mismo lugar que las iniciales. */
+.escudo-imagen {
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  object-fit: contain;
+}
+
+/* ---------- Avatar de jugador ---------- */
+
+.avatar {
+  --avatar: #6b7280;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--avatar) 16%, var(--color-superficie));
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--avatar) 55%, transparent);
+  color: color-mix(in srgb, var(--avatar) 80%, var(--color-texto));
+  font-family: var(--fuente-numeros);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.avatar-chico {
+  width: 22px;
+  height: 22px;
+  font-size: 0.6rem;
+}
+
+.con-avatar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.con-avatar > span:last-child {
+  min-width: 0;
+}
+
+/* Avatar con el escudo del equipo como insignia en la esquina (Goleadores y Asistencias). */
+.avatar-con-escudo {
+  position: relative;
+  flex: none;
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+}
+
+.avatar-con-escudo .avatar {
+  width: 34px;
+  height: 34px;
+}
+
+.avatar-con-escudo .escudo {
+  position: absolute;
+  right: -5px;
+  bottom: -3px;
+  width: 16px;
+  height: 16px;
+  font-size: 0.4rem;
+  box-shadow: 0 0 0 1.5px var(--color-superficie);
+}
+
+.avatar-con-escudo .escudo-imagen {
+  background: var(--color-superficie);
+  border-radius: 50%;
+}
+
+.eventos .avatar {
+  margin-top: 1px;
+}
