@@ -51,7 +51,7 @@ service cloud.firestore {
     }
 
     function torneoValido(t) {
-      return t.keys().hasOnly(['tipo', 'nombre', 'estado', 'equipos', 'jugadores', 'partidos', 'suspensiones', 'sanciones', 'plazoCapturaHoras', 'creadoEn', 'actualizadoEn'])
+      return t.keys().hasOnly(['tipo', 'nombre', 'estado', 'equipos', 'jugadores', 'partidos', 'suspensiones', 'sanciones', 'plazoCapturaHoras', 'anuncios', 'creadoEn', 'actualizadoEn'])
         && t.keys().hasAll(['tipo', 'nombre', 'estado', 'equipos', 'jugadores', 'partidos', 'suspensiones', 'sanciones', 'creadoEn', 'actualizadoEn'])
         && t.tipo in ['liga', 'copa']
         && t.estado in ['regular', 'liguilla', 'terminado']
@@ -61,6 +61,7 @@ service cloud.firestore {
         && t.partidos is list && t.partidos.size() <= 500
         && t.suspensiones is list
         && t.sanciones is list
+        && (!('anuncios' in t) || (t.anuncios is list && t.anuncios.size() <= 300))
         && (!('plazoCapturaHoras' in t) || (t.plazoCapturaHoras is int && t.plazoCapturaHoras >= 1 && t.plazoCapturaHoras <= 168))
         && t.actualizadoEn == request.time;
     }
@@ -115,6 +116,16 @@ service cloud.firestore {
         && d.golesLocal is list && d.golesLocal.size() <= 30
         && d.golesVisitante is list && d.golesVisitante.size() <= 30
         && d.actualizadoEn == request.time;
+    }
+
+    // Importe y estado de pago de la publicidad (un documento por torneo, con el id del torneo). Solo el administrador
+    // lo lee y lo escribe: el público ve los anuncios dentro del torneo, pero nunca lo que se cobró.
+    match /cobros/{torneoId} {
+      allow read, delete: if esAdmin();
+      allow create, update: if esAdmin()
+        && request.resource.data.keys().hasOnly(['porAnuncio', 'actualizadoEn'])
+        && request.resource.data.porAnuncio is map
+        && request.resource.data.actualizadoEn == request.time;
     }
 
     // Qué secciones se ven en el sitio público (un solo documento, "sitio"). Cualquiera lo lee; solo el administrador lo cambia.

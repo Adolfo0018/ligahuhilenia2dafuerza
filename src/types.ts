@@ -117,8 +117,42 @@ export interface Torneo {
   sanciones: Sancion[]
   /** Horas que tienen los delegados para capturar después de la hora del partido (RF-025). Por defecto, 24. */
   plazoCapturaHoras?: number
+  /** Publicidad por jornada (solo los datos públicos; el importe y el pago van aparte, en "cobros"). */
+  anuncios?: Anuncio[]
   /** Milisegundos; lo pone el servidor al crear el torneo. */
   creadoEn?: number
+}
+
+export type TipoAnuncio = 'oficial' | 'regular'
+/** Solo los publicados y dentro de su vigencia se ven en el sitio. Un retirado deja libre el espacio oficial. */
+export type EstadoAnuncio = 'borrador' | 'publicado' | 'retirado'
+
+/** Anuncio de una jornada de fase regular. Va dentro del torneo para no sumar lecturas al sitio público. */
+export interface Anuncio {
+  id: string
+  jornada: number
+  tipo: TipoAnuncio
+  negocio: string
+  /** Nombre del archivo en src/assets/publicidad, sin extensión. Sin logo se muestran las iniciales. */
+  logo?: string
+  mensaje?: string
+  /** https://…, tel:…, mailto:… o un número de WhatsApp de 10 dígitos. */
+  enlace?: string
+  /** Texto del botón del patrocinador oficial; por defecto, "Contactar". */
+  textoBoton?: string
+  /** Vigencia, de "2026-11-09" a "2026-11-15", ambos días incluidos. */
+  inicio: string
+  fin: string
+  /** Orden de los anuncios regulares dentro de la jornada. */
+  orden: number
+  estado: EstadoAnuncio
+}
+
+/** Lo que se cobró por un anuncio. Solo el administrador lo lee (colección "cobros", un documento por torneo). */
+export interface Cobro {
+  /** Importe acordado en MXN. */
+  importe: number
+  pagado: boolean
 }
 
 export type Rol = 'admin' | 'delegado' | 'pendiente'

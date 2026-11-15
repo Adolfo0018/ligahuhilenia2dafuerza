@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
+import { AnunciosRegulares, PatrocinadorOficial } from '../components/Publicidad'
 import { Segmentado } from '../components/Segmentado'
 import { TarjetaPartido } from '../components/TarjetaPartido'
 import { useTorneo } from '../lib/contexto'
 import { useEnVivoTorneo } from '../lib/envivo'
 import { RONDAS } from '../lib/liguilla'
 import { jornadaActual, porFecha } from '../lib/partidos'
+import { publicidadDeJornada } from '../lib/publicidad'
 
 type Vista = 'regular' | 'liguilla'
 
@@ -57,6 +59,8 @@ function FaseRegular() {
   const partidos = regulares.filter((p) => p.jornada === jornada).sort(porFecha)
   const juegan = new Set(partidos.flatMap((p) => [p.localId, p.visitanteId]))
   const descansan = torneo.equipos.filter((e) => !juegan.has(e.id))
+  // Viene en el mismo documento del torneo: no hace ninguna lectura más.
+  const publicidad = publicidadDeJornada(torneo, jornada)
 
   return (
     <>
@@ -85,12 +89,14 @@ function FaseRegular() {
       <h2 className="titulo-seccion">
         Jornada {jornada} <small>de {total}</small>
       </h2>
+      {publicidad.oficial && <PatrocinadorOficial anuncio={publicidad.oficial} />}
       <div className="lista-partidos">
         {partidos.map((p) => (
           <TarjetaPartido key={p.id} partido={p} />
         ))}
       </div>
       {descansan.length > 0 && <p className="nota-descanso">Descansa: {descansan.map((e) => e.nombre).join(', ')}</p>}
+      <AnunciosRegulares anuncios={publicidad.regulares} />
     </>
   )
 }

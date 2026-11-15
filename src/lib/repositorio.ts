@@ -21,7 +21,7 @@ function base() {
   return db
 }
 
-function aTorneo(id: string, d: DocumentData): Torneo {
+export function aTorneo(id: string, d: DocumentData): Torneo {
   return {
     id,
     tipo: d.tipo,
@@ -33,6 +33,7 @@ function aTorneo(id: string, d: DocumentData): Torneo {
     suspensiones: d.suspensiones ?? [],
     sanciones: d.sanciones ?? [],
     plazoCapturaHoras: d.plazoCapturaHoras,
+    anuncios: d.anuncios ?? [],
     creadoEn: d.creadoEn?.toMillis() ?? Date.now(),
   }
 }

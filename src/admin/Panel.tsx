@@ -15,9 +15,10 @@ import { SeccionEquipos } from './SeccionEquipos'
 import type { Torneo } from '../types'
 import { SeccionPartidos } from './SeccionPartidos'
 import { SeccionPendientes, usePendientes } from './SeccionPendientes'
+import { SeccionPublicidad } from './SeccionPublicidad'
 import { SeccionTorneo } from './SeccionTorneo'
 
-type Seccion = 'pendientes' | 'partidos' | 'disciplina' | 'equipos' | 'torneo' | 'sitio'
+type Seccion = 'pendientes' | 'partidos' | 'disciplina' | 'equipos' | 'publicidad' | 'torneo' | 'sitio'
 
 /** Secciones del torneo elegido; "Pendientes" muestra cuántas cosas esperan al administrador. */
 function ContenidoTorneo({ torneo, seccion, onSeccion }: { torneo: Torneo; seccion: Seccion; onSeccion: (s: Seccion) => void }) {
@@ -28,6 +29,7 @@ function ContenidoTorneo({ torneo, seccion, onSeccion }: { torneo: Torneo; secci
     { id: 'partidos', nombre: 'Partidos' },
     { id: 'disciplina', nombre: rojas ? `Disciplina (${rojas})` : 'Disciplina' },
     { id: 'equipos', nombre: 'Equipos y jugadores' },
+    { id: 'publicidad', nombre: 'Publicidad' },
     { id: 'torneo', nombre: 'Torneo' },
     { id: 'sitio', nombre: 'Sitio' },
   ]
@@ -39,6 +41,7 @@ function ContenidoTorneo({ torneo, seccion, onSeccion }: { torneo: Torneo; secci
         {seccion === 'partidos' && <SeccionPartidos />}
         {seccion === 'disciplina' && <SeccionDisciplina />}
         {seccion === 'equipos' && <SeccionEquipos />}
+        {seccion === 'publicidad' && <SeccionPublicidad />}
         {seccion === 'torneo' && <SeccionTorneo />}
         {seccion === 'sitio' && <SeccionSitio />}
       </div>
