@@ -4,7 +4,6 @@ import { useTorneo } from '../lib/contexto'
 import {
   asignarEquipo,
   borrarSolicitudes,
-  eventosDeCapturas,
   quitarAcceso,
   rechazarCuenta,
   rechazarSolicitud,
@@ -14,6 +13,7 @@ import {
   venceCaptura,
   yaSeJugo,
 } from '../lib/delegados'
+import { eventosParaRevision, idEnVivo, marcadorEnVivo, useEnVivoTorneo, type EnVivo } from '../lib/envivo'
 import { fechaCorta, POSICIONES, etiquetaPartido } from '../lib/formato'
 import { estaPublicado } from '../lib/partidos'
 import { modificarTorneo } from '../lib/repositorio'
@@ -28,13 +28,19 @@ export function usePendientes(torneo: Torneo) {
   const usuarios = useUsuarios()
   const capturas = useCapturas(torneo.id)
   const solicitudes = useSolicitudes(torneo.id)
+  const vivos = useEnVivoTorneo()
   const cuentas = (usuarios ?? []).filter((u) => u.rol === 'pendiente')
   const altas = (solicitudes ?? []).filter((s) => s.estado === 'pendiente')
   const partidos = torneo.partidos.filter((p) => !estaPublicado(p) && yaSeJugo(p))
   const capturasDe = (p: Partido) => (capturas ?? []).filter((c) => c.partidoId === p.id)
-  const porRevisar = partidos.filter((p) => capturasDe(p).length > 0)
+  const vivoDe = (p: Partido) => vivos.find((v) => v.id === idEnVivo(torneo.id, p.id) && v.localId === p.localId && v.visitanteId === p.visitanteId)
+  // Por revisar: con alguna captura, o con el marcador en vivo ya terminado.
+  const porRevisar = torneo.partidos.filter(
+    (p) => !estaPublicado(p) && ((yaSeJugo(p) && capturasDe(p).length > 0) || vivoDe(p)?.estado === 'final'),
+  )
   // RF-022: venció el plazo y falta la captura de al menos un delegado.
-  const vencidos = partidos.filter((p) => (venceCaptura(p, torneo) ?? Infinity) < Date.now() && capturasDe(p).length < 2)
+  // Un partido que se llevó en vivo y ya terminó está en "por revisar", no en vencidos.
+  const vencidos = partidos.filter((p) => (venceCaptura(p, torneo) ?? Infinity) < Date.now() && capturasDe(p).length < 2 && !vivoDe(p))
   return {
     usuarios: usuarios ?? [],
     capturas: capturas ?? [],
@@ -43,6 +49,7 @@ export function usePendientes(torneo: Torneo) {
     porRevisar,
     vencidos,
     capturasDe,
+    vivoDe,
     total: cuentas.length + altas.length + porRevisar.length + vencidos.filter((p) => capturasDe(p).length === 0).length,
   }
 }
@@ -61,7 +68,7 @@ export function SeccionPendientes() {
           </h2>
           <div className="lista-admin">
             {pendientes.porRevisar.map((p) => (
-              <RevisionPartido key={p.id} partido={p} capturas={pendientes.capturasDe(p)} />
+              <RevisionPartido key={p.id} partido={p} capturas={pendientes.capturasDe(p)} vivo={pendientes.vivoDe(p)} />
             ))}
           </div>
         </section>
@@ -94,15 +101,16 @@ export function SeccionPendientes() {
   )
 }
 
-function RevisionPartido({ partido, capturas }: { partido: Partido; capturas: Captura[] }) {
+function RevisionPartido({ partido, capturas, vivo }: { partido: Partido; capturas: Captura[]; vivo?: EnVivo }) {
   const { equipo } = useTorneo()
   const [revisando, setRevisando] = useState(false)
   if (revisando) {
     return (
       <CapturaResultado
         partido={partido}
-        eventosIniciales={eventosDeCapturas(capturas)}
+        eventosIniciales={eventosParaRevision(partido, capturas, vivo)}
         capturas={capturas.map((c) => c.id)}
+        enVivoId={vivo?.id}
         onListo={() => setRevisando(false)}
       />
     )
@@ -121,7 +129,14 @@ function RevisionPartido({ partido, capturas }: { partido: Partido; capturas: Ca
             <Escudo equipo={equipo(id)} />
             <span className="fila-nombre">{equipo(id).nombre}</span>
             <span className={captura ? 'estado-captura listo' : 'estado-captura'}>
-              {captura ? `${captura.eventos.filter((e) => e.tipo === 'gol').length} goles capturados` : 'Sin captura'}
+              {captura
+                ? `${captura.eventos.filter((e) => e.tipo === 'gol').length} goles capturados`
+                : vivo
+                  ? (() => {
+                      const n = id === vivo.localId ? marcadorEnVivo(vivo).local : marcadorEnVivo(vivo).visitante
+                      return n === 1 ? '1 gol en vivo' : `${n} goles en vivo`
+                    })()
+                  : 'Sin captura'}
             </span>
           </span>
         )

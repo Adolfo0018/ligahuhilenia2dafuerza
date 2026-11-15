@@ -1,6 +1,7 @@
 import { Avatar } from './Avatar'
 import { useState } from 'react'
 import { useTorneo } from '../lib/contexto'
+import { eventosEnVivo, marcadorEnVivo, textoEnVivo, useAhora, useEnVivoDe } from '../lib/envivo'
 import { fechaCorta } from '../lib/formato'
 import { estaPublicado, marcador } from '../lib/partidos'
 import type { Equipo, EstadoPartido, Evento, Partido } from '../types'
@@ -17,24 +18,38 @@ const ESTADOS: Record<EstadoPartido, string> = {
 export function TarjetaPartido({ partido, etiqueta }: { partido: Partido; etiqueta?: string }) {
   const { equipo } = useTorneo()
   const [abierto, setAbierto] = useState(false)
-  const m = estaPublicado(partido) ? marcador(partido) : null
+  // Mientras no esté publicado, se muestra el marcador en vivo si lo hay; no cuenta para la tabla.
+  const enVivo = useEnVivoDe(partido)
+  const vivo = estaPublicado(partido) ? undefined : enVivo
+  const ahora = useAhora(!!vivo && vivo.estado !== 'final')
+  const m = estaPublicado(partido) ? marcador(partido) : vivo ? { ...marcadorEnVivo(vivo), tiempoExtra: false } : null
   const penales = partido.penales
   let gana: string | undefined
-  if (m && (m.local !== m.visitante || penales)) {
+  // Solo un resultado publicado marca ganador; en vivo nadie ha perdido todavía.
+  if (m && !vivo && (m.local !== m.visitante || penales)) {
     const ganaLocal = m.local !== m.visitante ? m.local > m.visitante : penales!.local > penales!.visitante
     gana = ganaLocal ? partido.localId : partido.visitanteId
   }
-  const conDetalle = partido.estado === 'administrativo' || (partido.estado === 'finalizado' && partido.eventos.length > 0)
+  const eventosVivo = vivo ? eventosEnVivo(vivo) : []
+  const conDetalle =
+    partido.estado === 'administrativo' || (partido.estado === 'finalizado' && partido.eventos.length > 0) || eventosVivo.some((e) => e.tipo === 'gol' && e.jugadorId)
 
   const contenido = (
     <>
       <span className="partido-meta">
         <span className="partido-cuando">
           {etiqueta && <strong>{etiqueta} · </strong>}
-          {!partido.fecha && m ? 'Fecha no registrada' : fechaCorta(partido.fecha)}
+          {!partido.fecha && m && !vivo ? 'Fecha no registrada' : fechaCorta(partido.fecha)}
           {partido.cancha && ` · ${partido.cancha}`}
         </span>
-        <span className={`insignia insignia-${partido.estado}`}>{ESTADOS[partido.estado]}</span>
+        {vivo ? (
+          <span className={`insignia insignia-vivo${vivo.estado === 'final' ? ' insignia-vivo-final' : ''}`}>
+            {vivo.estado !== 'final' && <span className="punto-vivo" aria-hidden="true" />}
+            {vivo.estado === 'final' ? 'Final · por confirmar' : `En vivo · ${textoEnVivo(vivo, ahora)}`}
+          </span>
+        ) : (
+          <span className={`insignia insignia-${partido.estado}`}>{ESTADOS[partido.estado]}</span>
+        )}
       </span>
       <FilaEquipo equipo={equipo(partido.localId)} goles={m?.local} pierde={!!gana && gana !== partido.localId} />
       <FilaEquipo equipo={equipo(partido.visitanteId)} goles={m?.visitante} pierde={!!gana && gana !== partido.visitanteId} />
@@ -52,7 +67,7 @@ export function TarjetaPartido({ partido, etiqueta }: { partido: Partido; etique
       ) : (
         <div className="partido-cuerpo">{contenido}</div>
       )}
-      {abierto && <DetallePartido partido={partido} />}
+      {abierto && <DetallePartido partido={vivo ? { ...partido, estado: 'finalizado', eventos: eventosVivo } : partido} />}
     </article>
   )
 }

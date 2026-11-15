@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Segmentado } from '../components/Segmentado'
 import { TarjetaPartido } from '../components/TarjetaPartido'
 import { useTorneo } from '../lib/contexto'
+import { useEnVivoTorneo } from '../lib/envivo'
 import { RONDAS } from '../lib/liguilla'
 import { jornadaActual, porFecha } from '../lib/partidos'
 
@@ -35,6 +36,16 @@ function FaseRegular() {
   const total = Math.max(1, ...regulares.map((p) => p.jornada ?? 1))
   const [jornada, setJornada] = useState(() => jornadaActual(torneo))
   const lista = useRef<HTMLDivElement>(null)
+  // Si hay un partido en vivo, se abre su jornada (una sola vez, al llegar el marcador).
+  const vivos = useEnVivoTorneo()
+  const saltoAlVivo = useRef(false)
+  const jornadaVivo = regulares.find((p) => vivos.some((v) => v.partidoId === p.id && v.estado !== 'final'))?.jornada
+  useEffect(() => {
+    if (jornadaVivo && !saltoAlVivo.current) {
+      saltoAlVivo.current = true
+      setJornada(jornadaVivo)
+    }
+  }, [jornadaVivo])
 
   // Mantiene a la vista la jornada elegida cuando las jornadas no caben en la pantalla.
   useEffect(() => {

@@ -2,7 +2,9 @@ import { useState, type FormEvent } from 'react'
 import { Escudo } from '../components/Escudo'
 import { Segmentado } from '../components/Segmentado'
 import { useTorneo } from '../lib/contexto'
-import { eventosDeCapturas, useCapturas } from '../lib/delegados'
+import { useCapturas } from '../lib/delegados'
+import { borrarEnVivo, eventosParaRevision, marcadorEnVivo, textoEnVivo, useEnVivoDe } from '../lib/envivo'
+import { ControlEnVivo } from './ControlEnVivo'
 import { fechaCorta } from '../lib/formato'
 import { estaPublicado, jornadaActual, juegaEn, marcador, porFecha } from '../lib/partidos'
 import { modificarTorneo } from '../lib/repositorio'
@@ -126,12 +128,19 @@ function FaseRegular() {
 
 export function TarjetaPartidoAdmin({ partido, capturas }: { partido: Partido; capturas: Captura[] }) {
   const { torneo, equipo } = useTorneo()
-  const [modo, setModo] = useState<'ver' | 'editar' | 'resultado'>('ver')
+  const [modo, setModo] = useState<'ver' | 'editar' | 'resultado' | 'vivo'>('ver')
   const { guardar, aviso } = useGuardado()
   const publicado = estaPublicado(partido)
-  const m = publicado ? marcador(partido) : null
-  // Mientras no esté publicado, la captura de los delegados es el punto de partida del resultado.
-  const usarCapturas = !publicado && capturas.length > 0
+  const enVivo = useEnVivoDe(partido)
+  const vivo = publicado ? undefined : enVivo
+  const m = publicado ? marcador(partido) : vivo ? marcadorEnVivo(vivo) : null
+  // Mientras no esté publicado, la captura de los delegados (o su marcador en vivo) es el punto de partida del resultado.
+  const usarCapturas = !publicado && (capturas.length > 0 || !!vivo)
+
+  function descartarVivo() {
+    if (!enVivo || !window.confirm('¿Quitar el marcador en vivo de este partido? Deja de verse en el sitio.')) return
+    guardar(() => borrarEnVivo(enVivo.id), 'Marcador en vivo quitado')
+  }
 
   function aplazar() {
     if (!window.confirm('¿Aplazar este partido? Conserva su jornada y queda con fecha por definir.')) return
@@ -155,8 +164,9 @@ export function TarjetaPartidoAdmin({ partido, capturas }: { partido: Partido; c
     return (
       <CapturaResultado
         partido={partido}
-        eventosIniciales={usarCapturas ? eventosDeCapturas(capturas) : undefined}
+        eventosIniciales={usarCapturas ? eventosParaRevision(partido, capturas, vivo) : undefined}
         capturas={capturas.map((c) => c.id)}
+        enVivoId={enVivo?.id}
         penalesIniciales={
           usarCapturas
             ? {
@@ -170,6 +180,17 @@ export function TarjetaPartidoAdmin({ partido, capturas }: { partido: Partido; c
     )
   }
 
+  if (modo === 'vivo') {
+    return (
+      <div className="lista-admin-columna">
+        <ControlEnVivo partido={partido} />
+        <button type="button" className="boton boton-chico boton-secundario" onClick={() => setModo('ver')}>
+          Cerrar marcador en vivo
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div className="tarjeta tarjeta-partido-admin">
       <div className="partido-meta">
@@ -177,7 +198,11 @@ export function TarjetaPartidoAdmin({ partido, capturas }: { partido: Partido; c
           {partido.fase === 'liguilla' && `${partido.vuelta === 'ida' ? 'Ida' : 'Vuelta'} · `}
           {fechaCorta(partido.fecha)} · {partido.cancha || 'Cancha por definir'}
         </span>
-        <span className={`insignia insignia-${partido.estado}`}>{ESTADOS[partido.estado]}</span>
+        {vivo ? (
+          <span className={`insignia insignia-vivo${vivo.estado === 'final' ? ' insignia-vivo-final' : ''}`}>{textoEnVivo(vivo)}</span>
+        ) : (
+          <span className={`insignia insignia-${partido.estado}`}>{ESTADOS[partido.estado]}</span>
+        )}
       </div>
       {[partido.localId, partido.visitanteId].map((id, i) => (
         <span key={id} className="fila-equipo">
@@ -194,8 +219,18 @@ export function TarjetaPartidoAdmin({ partido, capturas }: { partido: Partido; c
       {aviso}
       <div className="acciones">
         <button type="button" className="boton boton-chico" onClick={() => setModo('resultado')}>
-          {publicado ? 'Editar resultado' : usarCapturas ? 'Revisar captura' : 'Capturar resultado'}
+          {publicado ? 'Editar resultado' : usarCapturas ? 'Revisar y publicar' : 'Capturar resultado'}
         </button>
+        {!publicado && (
+          <button type="button" className="boton boton-chico boton-secundario" onClick={() => setModo('vivo')}>
+            {vivo ? 'Ver en vivo' : 'En vivo'}
+          </button>
+        )}
+        {enVivo && (
+          <button type="button" className="boton boton-chico boton-peligro-texto" onClick={descartarVivo}>
+            Quitar en vivo
+          </button>
+        )}
         <button type="button" className="boton boton-chico boton-secundario" onClick={() => setModo('editar')}>
           {partido.estado === 'aplazado' ? 'Reprogramar' : 'Editar'}
         </button>

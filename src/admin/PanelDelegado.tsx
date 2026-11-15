@@ -4,6 +4,7 @@ import { Escudo } from '../components/Escudo'
 import { Segmentado } from '../components/Segmentado'
 import { liga } from '../data'
 import { ProveedorTorneo, useTorneo } from '../lib/contexto'
+import { eventosEnVivo, ProveedorEnVivo, useEnVivoDe, useEnVivoTorneo } from '../lib/envivo'
 import {
   borrarSolicitudes,
   guardarCaptura,
@@ -19,6 +20,7 @@ import { estaPublicado, juegaEn, marcador, porFecha } from '../lib/partidos'
 import { auth } from '../lib/sesion'
 import { useTorneos } from '../lib/torneos'
 import type { Captura, DatosJugador, Equipo, Evento, Partido, Posicion, Usuario } from '../types'
+import { ControlEnVivo } from './ControlEnVivo'
 import { ColumnaEquipo, conClave, normalizarTarjetas, type Gol, type Tarjeta } from './CapturaResultado'
 import { inscritoEnOtro, leerLista } from './listin'
 import { useGuardado } from './useGuardado'
@@ -73,6 +75,7 @@ export function PanelDelegado({ usuario, ficha }: { usuario: User; ficha: Usuari
         )}
         {torneo && equipo && (
           <ProveedorTorneo torneo={torneo}>
+          <ProveedorEnVivo torneoId={torneo.id}>
             <p className="nota">{nombreTorneo(torneo)}</p>
             <Segmentado etiqueta="Sección" opciones={SECCIONES} valor={seccion} onCambiar={setSeccion} />
             <div className="admin-seccion">
@@ -82,6 +85,7 @@ export function PanelDelegado({ usuario, ficha }: { usuario: User; ficha: Usuari
                 <PlantelDelegado equipo={equipo} uid={usuario.uid} />
               )}
             </div>
+          </ProveedorEnVivo>
           </ProveedorTorneo>
         )}
       </main>
@@ -94,12 +98,16 @@ export function PanelDelegado({ usuario, ficha }: { usuario: User; ficha: Usuari
 function PartidosDelegado({ equipo, uid }: { equipo: Equipo; uid: string }) {
   const { torneo } = useTorneo()
   const capturas = useCapturas(torneo.id, equipo.id)
+  const vivos = useEnVivoTorneo()
   const [abierto, setAbierto] = useState<string | null>(null)
   if (!capturas) return <p className="vacio">Cargando…</p>
 
   const deEquipo = torneo.partidos.filter((p) => juegaEn(p, equipo.id)).sort(porFecha)
-  const porCapturar = deEquipo.filter((p) => !estaPublicado(p) && yaSeJugo(p))
-  const proximos = deEquipo.filter((p) => !estaPublicado(p) && !yaSeJugo(p))
+  // En vivo: los partidos de hoy de su equipo, o los que ya tienen marcador en vivo.
+  const hoy = new Date().toLocaleDateString('sv-SE')
+  const deHoy = deEquipo.filter((p) => !estaPublicado(p) && (p.fecha.startsWith(hoy) || vivos.some((v) => v.partidoId === p.id)))
+  const porCapturar = deEquipo.filter((p) => !estaPublicado(p) && yaSeJugo(p) && !deHoy.includes(p))
+  const proximos = deEquipo.filter((p) => !estaPublicado(p) && !yaSeJugo(p) && !deHoy.includes(p))
   const publicados = deEquipo.filter(estaPublicado).reverse()
   const captura = (p: Partido) => capturas.find((c) => c.partidoId === p.id)
 
@@ -112,6 +120,23 @@ function PartidosDelegado({ equipo, uid }: { equipo: Equipo; uid: string }) {
 
   return (
     <>
+      {deHoy.length > 0 && (
+        <section className="bloque">
+          <h2 className="titulo-seccion">
+            Hoy <small>marcador en vivo</small>
+          </h2>
+          {deHoy.map((p) => (
+            <div key={p.id} className="lista-admin">
+              <TarjetaPartidoDelegado partido={p} captura={captura(p)} onCapturar={yaSeJugo(p) ? () => setAbierto(p.id) : undefined} />
+              {abierto === p.id ? (
+                <CapturaDelegado partido={p} equipo={equipo} uid={uid} captura={captura(p)} onListo={() => setAbierto(null)} />
+              ) : (
+                <ControlEnVivo partido={p} equipoId={equipo.id} />
+              )}
+            </div>
+          ))}
+        </section>
+      )}
       <section className="bloque">
         <h2 className="titulo-seccion">
           Por capturar <small>partidos jugados sin resultado publicado</small>
@@ -179,7 +204,9 @@ function CapturaDelegado({ partido, equipo, uid, captura, onListo }: {
   onListo: () => void
 }) {
   const { torneo } = useTorneo()
-  const iniciales = captura?.eventos ?? []
+  const vivo = useEnVivoDe(partido)
+  // Si no ha capturado, parte de los goles que se marcaron en vivo.
+  const iniciales = captura?.eventos ?? (vivo ? eventosEnVivo(vivo, equipo.id) : [])
   const [goles, setGoles] = useState(() => iniciales.filter((e): e is Gol => e.tipo === 'gol').map(conClave))
   const [tarjetas, setTarjetas] = useState(() => iniciales.filter((e): e is Tarjeta => e.tipo !== 'gol').map(conClave))
   const { guardar, fallar, guardando, aviso } = useGuardado()

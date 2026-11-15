@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Segmentado } from '../components/Segmentado'
 import { liga } from '../data'
 import { ProveedorTorneo } from '../lib/contexto'
+import { ProveedorEnVivo } from '../lib/envivo'
 import { iniciales, nombreLiga, nombreTorneo } from '../lib/formato'
 import { auth } from '../lib/sesion'
 import { useTorneos } from '../lib/torneos'
@@ -119,7 +120,9 @@ export function Panel({ usuario }: { usuario: User }) {
 
             {torneo ? (
               <ProveedorTorneo torneo={torneo}>
-                <ContenidoTorneo key={torneo.id} torneo={torneo} seccion={seccion} onSeccion={setSeccion} />
+                <ProveedorEnVivo torneoId={torneo.id}>
+                  <ContenidoTorneo key={torneo.id} torneo={torneo} seccion={seccion} onSeccion={setSeccion} />
+                </ProveedorEnVivo>
               </ProveedorTorneo>
             ) : (
               !creando && <p className="vacio">Todavía no hay torneos. Crea el primero con “Nuevo torneo”.</p>

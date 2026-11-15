@@ -3,6 +3,7 @@ import { Escudo } from '../components/Escudo'
 import { useTorneo } from '../lib/contexto'
 import { cerrarCapturas, reabrirCapturas } from '../lib/delegados'
 import { suspendidosEn } from '../lib/estadisticas'
+import { borrarEnVivo } from '../lib/envivo'
 import { globalFinal } from '../lib/liguilla'
 import { etiquetaJugador, porNumero } from '../lib/formato'
 import { estaPublicado, marcador } from '../lib/partidos'
@@ -58,9 +59,11 @@ interface Props {
   capturas?: string[]
   /** Penales que capturó cada delegado en la vuelta de la final (RF-023). */
   penalesIniciales?: { local?: number; visitante?: number }
+  /** Marcador en vivo del partido: se borra al publicar, porque ya cuenta el resultado oficial. */
+  enVivoId?: string
 }
 
-export function CapturaResultado({ partido, onListo, eventosIniciales, capturas = [], penalesIniciales }: Props) {
+export function CapturaResultado({ partido, onListo, eventosIniciales, capturas = [], penalesIniciales, enVivoId }: Props) {
   const { torneo, equipo } = useTorneo()
   const iniciales = eventosIniciales ?? partido.eventos
   const [goles, setGoles] = useState(() => iniciales.filter((e): e is Gol => e.tipo === 'gol').map(conClave))
@@ -105,6 +108,7 @@ export function CapturaResultado({ partido, onListo, eventosIniciales, capturas 
         partidos: t.partidos.map((p) => (p.id === partido.id ? { ...p, ...cambio } : p)),
       }))
       await cerrarCapturas(capturas)
+      if (enVivoId) await borrarEnVivo(enVivoId)
     }, 'Resultado publicado')
     if (ok) onListo()
   }

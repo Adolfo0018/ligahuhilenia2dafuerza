@@ -84,6 +84,39 @@ service cloud.firestore {
       allow delete: if esAdmin();
     }
 
+    // Marcador en vivo de un partido (un documento por partido). Cualquiera lo lee. Cualquiera de los dos delegados
+    // del partido marca inicio, medio tiempo y final; cada uno solo cambia los goles de su equipo. Ya en "final",
+    // solo el administrador lo cambia o lo borra al publicar el resultado. No cuenta para la tabla.
+    match /envivo/{id} {
+      allow read: if true;
+      allow create: if (esAdmin() || participa(request.resource.data))
+        && enVivoValido(id, request.resource.data)
+        && request.resource.data.estado == 'primer'
+        && request.resource.data.golesLocal.size() == 0
+        && request.resource.data.golesVisitante.size() == 0;
+      allow update: if enVivoValido(id, request.resource.data) && (esAdmin() || (
+        resource.data.estado != 'final'
+        && participa(resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'reanudadoEn', 'golesLocal', 'golesVisitante', 'actualizadoEn'])
+        && (esDelegadoDe(resource.data.localId) || request.resource.data.golesLocal == resource.data.golesLocal)
+        && (esDelegadoDe(resource.data.visitanteId) || request.resource.data.golesVisitante == resource.data.golesVisitante)));
+      allow delete: if esAdmin();
+    }
+
+    function participa(d) {
+      return esDelegadoDe(d.localId) || esDelegadoDe(d.visitanteId);
+    }
+
+    function enVivoValido(id, d) {
+      return d.keys().hasOnly(['torneoId', 'partidoId', 'localId', 'visitanteId', 'estado', 'inicioEn', 'reanudadoEn', 'golesLocal', 'golesVisitante', 'actualizadoEn'])
+        && id == d.torneoId + '_' + d.partidoId
+        && d.localId is string && d.visitanteId is string && d.localId != d.visitanteId
+        && d.estado in ['primer', 'medio', 'segundo', 'final']
+        && d.golesLocal is list && d.golesLocal.size() <= 30
+        && d.golesVisitante is list && d.golesVisitante.size() <= 30
+        && d.actualizadoEn == request.time;
+    }
+
     // Qué secciones se ven en el sitio público (un solo documento, "sitio"). Cualquiera lo lee; solo el administrador lo cambia.
     match /configuracion/{id} {
       allow read: if true;

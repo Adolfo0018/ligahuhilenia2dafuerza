@@ -3,6 +3,7 @@ import { Encabezado } from './components/Encabezado'
 import { NavSecciones } from './components/NavSecciones'
 import { PiePagina } from './components/PiePagina'
 import { ProveedorTorneo } from './lib/contexto'
+import { ProveedorEnVivo } from './lib/envivo'
 import { seVe, useConfigSitio, type ConfigSitio } from './lib/sitio'
 import { useTorneos } from './lib/torneos'
 import { PaginaClasificacion } from './pages/PaginaClasificacion'
@@ -111,6 +112,7 @@ function SitioPublico() {
 
   return (
     <ProveedorTorneo torneo={torneo}>
+      <ProveedorEnVivo torneoId={torneo.estado === 'terminado' ? undefined : torneo.id}>
       <Encabezado torneos={torneos} actual={torneo} onCambiar={setTorneoId} />
       {secciones.length > 1 && <NavSecciones secciones={secciones} actual={seccion} onCambiar={setSeccion} />}
       {/* La clave reinicia filtros y jornada al cambiar de torneo. */}
@@ -120,6 +122,7 @@ function SitioPublico() {
         {seccion === 'estadisticas' && <PaginaEstadisticas config={config!} />}
       </main>
       <PiePagina acceso={seVe(config!, 'acceso')} />
+      </ProveedorEnVivo>
     </ProveedorTorneo>
   )
 }
