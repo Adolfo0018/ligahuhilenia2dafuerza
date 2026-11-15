@@ -127,10 +127,13 @@ export type TipoAnuncio = 'oficial' | 'regular'
 /** Solo los publicados y dentro de su vigencia se ven en el sitio. Un retirado deja libre el espacio oficial. */
 export type EstadoAnuncio = 'borrador' | 'publicado' | 'retirado'
 
-/** Anuncio de una jornada de fase regular. Va dentro del torneo para no sumar lecturas al sitio público. */
+/** Anuncio de una jornada de fase regular o de una ronda de liguilla. Va dentro del torneo para no sumar lecturas al sitio público. */
 export interface Anuncio {
   id: string
-  jornada: number
+  /** Jornada de fase regular. Un anuncio de liguilla no la tiene. */
+  jornada?: number
+  /** Ronda de liguilla (cuartos, semifinal o final). */
+  ronda?: Ronda
   tipo: TipoAnuncio
   negocio: string
   /** Nombre del archivo en src/assets/publicidad, sin extensión. Sin logo se muestran las iniciales. */

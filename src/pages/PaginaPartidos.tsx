@@ -6,7 +6,7 @@ import { useTorneo } from '../lib/contexto'
 import { useEnVivoTorneo } from '../lib/envivo'
 import { RONDAS } from '../lib/liguilla'
 import { jornadaActual, porFecha } from '../lib/partidos'
-import { publicidadDeJornada } from '../lib/publicidad'
+import { espacioJornada, publicidadDe } from '../lib/publicidad'
 
 type Vista = 'regular' | 'liguilla'
 
@@ -60,7 +60,7 @@ function FaseRegular() {
   const juegan = new Set(partidos.flatMap((p) => [p.localId, p.visitanteId]))
   const descansan = torneo.equipos.filter((e) => !juegan.has(e.id))
   // Viene en el mismo documento del torneo: no hace ninguna lectura más.
-  const publicidad = publicidadDeJornada(torneo, jornada)
+  const publicidad = publicidadDe(torneo, espacioJornada(jornada))
 
   return (
     <>
@@ -108,14 +108,18 @@ function Liguilla() {
       {RONDAS.map((r) => {
         const partidos = torneo.partidos.filter((p) => p.ronda === r.id).sort(porFecha)
         if (!partidos.length) return null
+        // Cada ronda es un espacio publicitario propio; viene en el mismo documento del torneo.
+        const publicidad = publicidadDe(torneo, r.id)
         return (
           <section key={r.id} className="bloque">
             <h2 className="titulo-seccion">{r.nombre}</h2>
+            {publicidad.oficial && <PatrocinadorOficial anuncio={publicidad.oficial} />}
             <div className="lista-partidos">
               {partidos.map((p) => (
                 <TarjetaPartido key={p.id} partido={p} etiqueta={p.vuelta === 'ida' ? 'Ida' : 'Vuelta'} />
               ))}
             </div>
+            <AnunciosRegulares anuncios={publicidad.regulares} />
           </section>
         )
       })}

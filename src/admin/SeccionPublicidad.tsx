@@ -2,18 +2,26 @@ import { useState } from 'react'
 import { AnunciosRegulares, LogoAnuncio, PatrocinadorOficial } from '../components/Publicidad'
 import { useTorneo } from '../lib/contexto'
 import { fechaSinHora } from '../lib/formato'
+import { RONDAS } from '../lib/liguilla'
 import { jornadaActual } from '../lib/partidos'
 import {
-  anunciosDeJornada,
+  anunciosDe,
   borrarAnuncio,
   cambiarEstadoAnuncio,
   enlaceSeguro,
+  espacioDe,
+  espacioJornada,
+  esLiguilla,
   guardarAnuncio,
   hoyLocal,
   LOGOS,
   moverAnuncio,
+  nombreEspacio,
+  partidosDeEspacio,
+  ubicacion,
   useCobros,
   vigencia,
+  type Espacio,
 } from '../lib/publicidad'
 import type { Anuncio, Cobro, TipoAnuncio, Torneo } from '../types'
 import { ErrorValidacion, useGuardado } from './useGuardado'
@@ -23,50 +31,79 @@ const ESTADOS: Record<Anuncio['estado'], string> = { borrador: 'Borrador', publi
 const VIGENCIAS = { vigente: 'Vigente', programado: 'Programado', vencido: 'Vencido' }
 const pesos = (n: number) => n.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 2 })
 
-/** Días con partido de la jornada, para proponer la vigencia. */
-function vigenciaSugerida(t: Torneo, jornada: number) {
+/** Días con partido de la jornada o ronda (en liguilla, ida y vuelta), para proponer la vigencia. */
+function vigenciaSugerida(t: Torneo, espacio: Espacio) {
   const hoy = hoyLocal()
-  const dias = t.partidos.filter((p) => p.jornada === jornada && p.fecha).map((p) => p.fecha.slice(0, 10)).sort()
+  const dias = partidosDeEspacio(t, espacio).filter((p) => p.fecha).map((p) => p.fecha.slice(0, 10)).sort()
   const ultimo = dias.at(-1)
   if (ultimo && ultimo >= hoy) return { inicio: hoy, fin: ultimo }
-  const enUnaSemana = new Date(Date.now() + 7 * 86400000).toLocaleDateString('sv-SE')
-  return { inicio: hoy, fin: enUnaSemana }
+  const margen = esLiguilla(espacio) ? 14 : 7
+  return { inicio: hoy, fin: new Date(Date.now() + margen * 86400000).toLocaleDateString('sv-SE') }
 }
 
-/** Publicidad por jornada: un patrocinador oficial y los anuncios regulares que se quiera. */
-export function SeccionPublicidad() {
+/** Al abrir: la ronda de liguilla más avanzada que ya tenga partidos, o la jornada actual. */
+function espacioInicial(t: Torneo): Espacio {
+  const ronda = [...RONDAS].reverse().find((r) => t.partidos.some((p) => p.ronda === r.id))
+  return t.estado !== 'regular' && ronda ? ronda.id : espacioJornada(jornadaActual(t))
+}
+
+/** Jornadas de fase regular y rondas de liguilla. Las rondas se pueden vender aunque la liguilla aún no se genere. */
+function SelectorEspacio({ valor, onCambiar, etiqueta = 'Jornada o ronda' }: { valor: Espacio; onCambiar: (e: Espacio) => void; etiqueta?: string }) {
   const { torneo } = useTorneo()
   const total = Math.max(1, ...torneo.partidos.filter((p) => p.fase === 'regular').map((p) => p.jornada ?? 1))
-  const [jornada, setJornada] = useState(() => jornadaActual(torneo))
+  return (
+    <label className="campo">
+      <span>{etiqueta}</span>
+      <select value={valor} onChange={(e) => onCambiar(e.target.value)}>
+        <optgroup label="Fase regular">
+          {Array.from({ length: total }, (_, i) => espacioJornada(i + 1)).map((e) => (
+            <option key={e} value={e}>
+              {nombreEspacio(e)}
+            </option>
+          ))}
+        </optgroup>
+        <optgroup label="Liguilla">
+          {RONDAS.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.nombre}
+            </option>
+          ))}
+        </optgroup>
+      </select>
+    </label>
+  )
+}
+
+/** Publicidad por jornada y por ronda de liguilla: un patrocinador oficial y los anuncios regulares que se quiera. */
+export function SeccionPublicidad() {
+  const { torneo } = useTorneo()
+  const [espacio, setEspacio] = useState(() => espacioInicial(torneo))
   const [editando, setEditando] = useState<Anuncio | 'nuevo' | null>(null)
   const carga = useCobros(torneo.id)
   const cobros = carga.estado === 'listo' ? carga.cobros : {}
-  const { oficial, regulares, oficialesRetirados } = anunciosDeJornada(torneo, jornada)
+  const { oficial, regulares, oficialesRetirados } = anunciosDe(torneo, espacio)
+  const sinPartidos = esLiguilla(espacio) && !partidosDeEspacio(torneo, espacio).length
 
   return (
     <section className="bloque">
       <h2 className="titulo-seccion">
-        Publicidad <small>por jornada de fase regular</small>
+        Publicidad <small>por jornada y por ronda de liguilla</small>
       </h2>
       <div className="tarjeta formulario">
         <div className="campos">
-          <label className="campo">
-            <span>Jornada</span>
-            <select
-              value={jornada}
-              onChange={(e) => {
-                setJornada(Number(e.target.value))
-                setEditando(null)
-              }}
-            >
-              {Array.from({ length: total }, (_, i) => i + 1).map((n) => (
-                <option key={n} value={n}>
-                  Jornada {n}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SelectorEspacio
+            valor={espacio}
+            onCambiar={(e) => {
+              setEspacio(e)
+              setEditando(null)
+            }}
+          />
         </div>
+        {sinPartidos && (
+          <p className="nota">
+            Esta ronda aún no tiene partidos. Puedes venderla y dejar el anuncio publicado: aparece en el sitio cuando generes la ronda.
+          </p>
+        )}
         <ul className="publicidad-resumen">
           <li>
             Espacio oficial:{' '}
@@ -96,7 +133,7 @@ export function SeccionPublicidad() {
       {editando !== null && (
         <FormAnuncio
           key={editando === 'nuevo' ? 'nuevo' : editando.id}
-          jornada={jornada}
+          espacio={espacio}
           anuncio={editando === 'nuevo' ? undefined : editando}
           cobro={editando === 'nuevo' ? undefined : cobros[editando.id]}
           oficialOcupado={!!oficial && (editando === 'nuevo' || oficial.id !== editando.id)}
@@ -108,7 +145,7 @@ export function SeccionPublicidad() {
       {oficial ? (
         <TarjetaAnuncio anuncio={oficial} cobro={cobros[oficial.id]} oficialOcupado={false} onEditar={() => setEditando(oficial)} />
       ) : (
-        <p className="vacio">Libre. Crea un anuncio de tipo “Patrocinador oficial” para esta jornada.</p>
+        <p className="vacio">Libre. Crea un anuncio de tipo “Patrocinador oficial” para {esLiguilla(espacio) ? 'esta ronda' : 'esta jornada'}.</p>
       )}
 
       <h3 className="publicidad-subtitulo">Anuncios regulares</h3>
@@ -126,7 +163,7 @@ export function SeccionPublicidad() {
           ))}
         </div>
       ) : (
-        <p className="vacio">No hay anuncios regulares en esta jornada.</p>
+        <p className="vacio">No hay anuncios regulares en {esLiguilla(espacio) ? 'esta ronda' : 'esta jornada'}.</p>
       )}
 
       {oficialesRetirados.length > 0 && (
@@ -206,14 +243,14 @@ function TarjetaAnuncio({
             type="button"
             className="boton boton-chico"
             disabled={guardando || (a.tipo === 'oficial' && a.estado === 'retirado' && oficialOcupado)}
-            title={a.tipo === 'oficial' && a.estado === 'retirado' && oficialOcupado ? 'La jornada ya tiene otro patrocinador oficial' : undefined}
+            title={a.tipo === 'oficial' && a.estado === 'retirado' && oficialOcupado ? 'Este espacio ya tiene otro patrocinador oficial' : undefined}
             onClick={() => guardar(() => cambiarEstadoAnuncio(torneo.id, a.id, 'publicado'), v === 'vigente' ? 'Publicado: ya se ve en el sitio' : 'Publicado; se verá dentro de su vigencia')}
           >
             Publicar
           </button>
         )}
         <button type="button" className="boton boton-chico boton-secundario" onClick={() => setCopiando(!copiando)}>
-          {copiando ? 'Cancelar copia' : 'Usar en otra jornada'}
+          {copiando ? 'Cancelar copia' : 'Usar en otra jornada o ronda'}
         </button>
         {mover && (
           <>
@@ -239,13 +276,18 @@ function TarjetaAnuncio({
   )
 }
 
-/** Reutiliza el anuncio en otra jornada como borrador, con su propia vigencia y su propio cobro (pendiente). */
+/** Espacio que sigue: la siguiente jornada, la siguiente ronda, o el mismo si ya es el último. */
+function siguienteEspacio(t: Torneo, actual: Espacio): Espacio {
+  const total = Math.max(1, ...t.partidos.filter((p) => p.fase === 'regular').map((p) => p.jornada ?? 1))
+  const todos = [...Array.from({ length: total }, (_, i) => espacioJornada(i + 1)), ...RONDAS.map((r) => r.id)]
+  return todos[Math.min(todos.length - 1, todos.indexOf(actual) + 1)] ?? actual
+}
+
+/** Reutiliza el anuncio en otra jornada o ronda como borrador, con su propia vigencia y su propio cobro (pendiente). */
 function CopiarAnuncio({ anuncio, cobro, onListo }: { anuncio: Anuncio; cobro?: Cobro; onListo: () => void }) {
   const { torneo } = useTorneo()
-  const total = Math.max(1, ...torneo.partidos.filter((p) => p.fase === 'regular').map((p) => p.jornada ?? 1))
-  const [jornada, setJornada] = useState(Math.min(total, anuncio.jornada + 1))
-  const sugerida = vigenciaSugerida(torneo, jornada)
-  const [fechas, setFechas] = useState(sugerida)
+  const [destino, setDestino] = useState(() => siguienteEspacio(torneo, espacioDe(anuncio)))
+  const [fechas, setFechas] = useState(() => vigenciaSugerida(torneo, destino))
   const [hecho, setHecho] = useState(false)
   const { guardar, guardando, aviso } = useGuardado()
 
@@ -253,7 +295,16 @@ function CopiarAnuncio({ anuncio, cobro, onListo }: { anuncio: Anuncio; cobro?: 
     if (fechas.fin < fechas.inicio) throw new ErrorValidacion('La fecha de fin no puede ser antes del inicio.')
     await guardarAnuncio(
       torneo.id,
-      { ...anuncio, id: nuevoId('an'), jornada, inicio: fechas.inicio, fin: fechas.fin, estado: 'borrador' },
+      {
+        ...anuncio,
+        id: nuevoId('an'),
+        jornada: undefined,
+        ronda: undefined,
+        ...ubicacion(destino),
+        inicio: fechas.inicio,
+        fin: fechas.fin,
+        estado: 'borrador',
+      },
       { importe: cobro?.importe ?? 0, pagado: false },
     )
     setHecho(true)
@@ -262,23 +313,14 @@ function CopiarAnuncio({ anuncio, cobro, onListo }: { anuncio: Anuncio; cobro?: 
   return (
     <div className="publicidad-copia">
       <div className="campos">
-        <label className="campo">
-          <span>Jornada</span>
-          <select
-            value={jornada}
-            onChange={(e) => {
-              const n = Number(e.target.value)
-              setJornada(n)
-              setFechas(vigenciaSugerida(torneo, n))
-            }}
-          >
-            {Array.from({ length: total }, (_, i) => i + 1).map((n) => (
-              <option key={n} value={n}>
-                Jornada {n}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SelectorEspacio
+          etiqueta="Copiar a"
+          valor={destino}
+          onCambiar={(e) => {
+            setDestino(e)
+            setFechas(vigenciaSugerida(torneo, e))
+          }}
+        />
         <label className="campo">
           <span>Inicio</span>
           <input type="date" value={fechas.inicio} onChange={(e) => setFechas({ ...fechas, inicio: e.target.value })} />
@@ -296,7 +338,7 @@ function CopiarAnuncio({ anuncio, cobro, onListo }: { anuncio: Anuncio; cobro?: 
             Listo
           </button>
         ) : (
-          <button type="button" className="boton boton-chico" disabled={guardando} onClick={() => guardar(copiar, `Copiado a la jornada ${jornada} como borrador. Publícalo desde esa jornada.`)}>
+          <button type="button" className="boton boton-chico" disabled={guardando} onClick={() => guardar(copiar, `Copiado a ${nombreEspacio(destino)} como borrador. Publícalo desde ahí.`)}>
             Crear copia
           </button>
         )}
@@ -306,20 +348,20 @@ function CopiarAnuncio({ anuncio, cobro, onListo }: { anuncio: Anuncio; cobro?: 
 }
 
 function FormAnuncio({
-  jornada,
+  espacio,
   anuncio,
   cobro,
   oficialOcupado,
   onListo,
 }: {
-  jornada: number
+  espacio: Espacio
   anuncio?: Anuncio
   cobro?: Cobro
   oficialOcupado: boolean
   onListo: () => void
 }) {
   const { torneo } = useTorneo()
-  const sugerida = vigenciaSugerida(torneo, jornada)
+  const sugerida = vigenciaSugerida(torneo, espacio)
   const [tipo, setTipo] = useState<TipoAnuncio>(anuncio?.tipo ?? (oficialOcupado ? 'regular' : 'oficial'))
   const [negocio, setNegocio] = useState(anuncio?.negocio ?? '')
   const [logo, setLogo] = useState(anuncio?.logo ?? '')
@@ -334,7 +376,7 @@ function FormAnuncio({
 
   const borrador: Anuncio = {
     id: anuncio?.id ?? '',
-    jornada,
+    ...ubicacion(espacio),
     tipo,
     negocio: negocio.trim() || 'Nombre del negocio',
     logo: logo || undefined,
@@ -371,7 +413,7 @@ function FormAnuncio({
       }}
     >
       <h3 className="formulario-titulo">
-        {anuncio ? `Editar anuncio · ${anuncio.negocio}` : `Nuevo anuncio · Jornada ${jornada}`}
+        {anuncio ? `Editar anuncio · ${anuncio.negocio}` : `Nuevo anuncio · ${nombreEspacio(espacio)}`}
       </h3>
       <div className="campos">
         <label className="campo">

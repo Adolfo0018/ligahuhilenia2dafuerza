@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { iniciales } from '../lib/formato'
-import { enlaceSeguro, LOGOS } from '../lib/publicidad'
+import { enlaceSeguro, etiquetaOficial, LOGOS } from '../lib/publicidad'
 import type { Anuncio } from '../types'
 
 /** Logo del catálogo (src/assets/publicidad) o, si falta o no carga, las iniciales del negocio. */
@@ -21,14 +21,15 @@ export function LogoAnuncio({ anuncio, grande = false }: { anuncio: Pick<Anuncio
 const atributosEnlace = (url: string) =>
   url.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer sponsored' } : {}
 
-/** Debajo del encabezado de la jornada, antes del primer partido. */
+/** Debajo del encabezado de la jornada o de la ronda de liguilla, antes del primer partido. */
 export function PatrocinadorOficial({ anuncio }: { anuncio: Anuncio }) {
   const url = enlaceSeguro(anuncio.enlace)
+  const etiqueta = etiquetaOficial(anuncio)
   return (
-    <aside className="patrocinador tarjeta" aria-label="Patrocinador oficial de la jornada">
+    <aside className={`patrocinador tarjeta${anuncio.ronda === 'final' ? ' patrocinador-final' : ''}`} aria-label={etiqueta}>
       <LogoAnuncio anuncio={anuncio} grande />
       <div className="patrocinador-texto">
-        <span className="patrocinador-etiqueta">Patrocinador oficial de la jornada</span>
+        <span className="patrocinador-etiqueta">{etiqueta}</span>
         <strong className="patrocinador-negocio">{anuncio.negocio}</strong>
         {anuncio.mensaje && <p className="patrocinador-mensaje">{anuncio.mensaje}</p>}
       </div>
@@ -45,7 +46,7 @@ export function PatrocinadorOficial({ anuncio }: { anuncio: Anuncio }) {
 export function AnunciosRegulares({ anuncios }: { anuncios: Anuncio[] }) {
   if (!anuncios.length) return null
   return (
-    <section className="anuncios" aria-label="Anunciantes de la jornada">
+    <section className="anuncios" aria-label={anuncios[0].ronda ? 'Anunciantes de la liguilla' : 'Anunciantes de la jornada'}>
       <h3 className="anuncios-titulo">Anunciantes</h3>
       <ul className="anuncios-lista">
         {anuncios.map((a) => {

@@ -1292,3 +1292,13 @@ a.anuncio:hover strong {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* La final es el espacio más visible: un poco más de presencia sin hacerlo más alto. */
+.patrocinador-final {
+  border-left-color: var(--color-primario);
+  background: linear-gradient(90deg, var(--color-acento-tenue), var(--color-superficie) 70%);
+}
+
+.patrocinador-final .patrocinador-etiqueta {
+  color: var(--color-primario);
+}

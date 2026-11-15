@@ -17,7 +17,7 @@ La tabla, la liguilla y las estadísticas ya se calculan a partir de los partido
 
 | Colección | Qué guarda | Quién escribe |
 |---|---|---|
-| `torneos` | Un documento por torneo con sus equipos, jugadores, partidos, resultados y la publicidad de cada jornada (`anuncios`: negocio, logo, mensaje, enlace, vigencia y si está publicada) | Solo el administrador; todos pueden leer |
+| `torneos` | Un documento por torneo con sus equipos, jugadores, partidos, resultados y la publicidad de cada jornada y ronda de liguilla (`anuncios`: negocio, logo, mensaje, enlace, vigencia y si está publicada) | Solo el administrador; todos pueden leer |
 | `usuarios` | Un documento por cuenta, con el **UID** de Authentication como id y el campo `rol` (`admin`, `delegado` o `pendiente`) | El delegado crea la suya como `pendiente` al registrarse; el administrador le asigna equipo desde el panel. El rol `admin` solo se da a mano en la consola |
 | `capturas` | Lo que captura cada delegado de su equipo en un partido | El delegado de ese equipo, hasta que se publica el resultado |
 | `solicitudes` | Altas y bajas de jugadores pedidas por los delegados | El delegado las crea; el administrador las aprueba o rechaza |
@@ -29,9 +29,9 @@ La tabla, la liguilla y las estadísticas ya se calculan a partir de los partido
 
 Cada delegado entra a `/admin`, elige **Soy delegado: crear cuenta** y llena su nombre, correo, contraseña y equipo. El administrador ve la cuenta en **Pendientes** y le da acceso. Desde su panel, el delegado captura los goles, asistencias y tarjetas de su equipo en cada partido jugado y pide altas y bajas de jugadores. El administrador revisa y publica.
 
-### Publicidad por jornada
+### Publicidad por jornada y por liguilla
 
-En el panel, pestaña **Publicidad**: elige la jornada y ve si el espacio de **patrocinador oficial** está libre u ocupado y qué **anuncios regulares** tiene. Cada anuncio se crea como borrador (negocio, tipo, logo, mensaje, enlace, vigencia, importe y estado de pago), se previsualiza y se publica aparte: marcar "Pagado" no lo publica. Solo se ven en el sitio los publicados dentro de su vigencia; el oficial va debajo del título de la jornada y los regulares después de los partidos. Una jornada solo puede tener un patrocinador oficial (se valida en una transacción, aunque dos administradores guarden a la vez). "Usar en otra jornada" crea una copia como borrador con su propia vigencia y su pago pendiente.
+En el panel, pestaña **Publicidad**: elige la jornada o la ronda de liguilla (cuartos, semifinales o final) y ve si el espacio de **patrocinador oficial** está libre u ocupado y qué **anuncios regulares** tiene. Cada anuncio se crea como borrador (negocio, tipo, logo, mensaje, enlace, vigencia, importe y estado de pago), se previsualiza y se publica aparte: marcar "Pagado" no lo publica. Solo se ven en el sitio los publicados dentro de su vigencia; el oficial va debajo del título de la jornada o de la ronda y los regulares después de sus partidos. Cada ronda de liguilla es un espacio propio (la final se destaca un poco más) y se puede vender antes de generar la ronda: aparece cuando la ronda tiene partidos. Cada jornada o ronda solo puede tener un patrocinador oficial (se valida en una transacción, aunque dos administradores guarden a la vez). "Usar en otra jornada o ronda" crea una copia como borrador con su propia vigencia y su pago pendiente.
 
 Los logos son archivos WebP en [src/assets/publicidad](src/assets/publicidad/LEEME.md); agregar uno requiere desplegar. La publicidad no suma lecturas al sitio: viaja dentro del documento del torneo que ya se lee.
 

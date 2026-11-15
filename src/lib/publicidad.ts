@@ -1,12 +1,14 @@
 import { deleteField, doc, onSnapshot, runTransaction, serverTimestamp } from 'firebase/firestore'
 import { useEffect, useState } from 'react'
 import { ErrorValidacion } from '../admin/useGuardado'
-import type { Anuncio, Cobro, Torneo } from '../types'
+import type { Anuncio, Cobro, Ronda, Torneo } from '../types'
 import { db } from './firebase'
+import { RONDAS } from './liguilla'
 import { aTorneo } from './repositorio'
 
 /**
- * Publicidad por jornada.
+ * Publicidad por jornada de fase regular y por ronda de liguilla. Cada una es un "espacio" con su patrocinador
+ * oficial y sus anuncios regulares.
  * - Lo público (negocio, logo, mensaje, enlace, vigencia, estado) va en `torneos/{id}.anuncios`, que el sitio ya lee:
  *   cero lecturas extra por visita.
  * - El importe y el estado de pago van en `cobros/{torneoId}`, que solo el administrador puede leer y escribir.
@@ -39,18 +41,55 @@ export function vigencia(a: Pick<Anuncio, 'inicio' | 'fin'>, hoy = hoyLocal()): 
 
 const porOrden = (a: Anuncio, b: Anuncio) => a.orden - b.orden || a.negocio.localeCompare(b.negocio)
 
-/** Lo que ve el público en una jornada: solo lo publicado y vigente hoy. */
-export function publicidadDeJornada(t: Torneo, jornada: number, hoy = hoyLocal()) {
-  const visibles = (t.anuncios ?? []).filter((a) => a.jornada === jornada && a.estado === 'publicado' && vigencia(a, hoy) === 'vigente')
+/** Espacio publicitario: "j5" para la jornada 5, o la ronda de liguilla ("cuartos", "semifinal", "final"). */
+export type Espacio = string
+
+export const espacioJornada = (jornada: number): Espacio => `j${jornada}`
+
+export function espacioDe(a: Pick<Anuncio, 'jornada' | 'ronda'>): Espacio {
+  return a.ronda ?? espacioJornada(a.jornada ?? 0)
+}
+
+export const esLiguilla = (espacio: Espacio) => !espacio.startsWith('j')
+
+/** Los campos que ubican un anuncio en su espacio. */
+export function ubicacion(espacio: Espacio): Pick<Anuncio, 'jornada' | 'ronda'> {
+  return esLiguilla(espacio) ? { ronda: espacio as Ronda } : { jornada: Number(espacio.slice(1)) }
+}
+
+/** "Jornada 5", "Cuartos de final", "Semifinales", "Final". */
+export function nombreEspacio(espacio: Espacio): string {
+  return esLiguilla(espacio) ? (RONDAS.find((r) => r.id === espacio)?.nombre ?? espacio) : `Jornada ${espacio.slice(1)}`
+}
+
+const ETIQUETAS_OFICIAL: Record<Ronda, string> = {
+  cuartos: 'Patrocinador oficial de los cuartos de final',
+  semifinal: 'Patrocinador oficial de las semifinales',
+  final: 'Patrocinador oficial de la final',
+}
+
+export function etiquetaOficial(a: Pick<Anuncio, 'ronda'>): string {
+  return a.ronda ? ETIQUETAS_OFICIAL[a.ronda] : 'Patrocinador oficial de la jornada'
+}
+
+/** Partidos del espacio, para proponer la vigencia. */
+export function partidosDeEspacio(t: Torneo, espacio: Espacio) {
+  const u = ubicacion(espacio)
+  return t.partidos.filter((p) => (u.ronda ? p.ronda === u.ronda : p.fase === 'regular' && p.jornada === u.jornada))
+}
+
+/** Lo que ve el público en una jornada o ronda: solo lo publicado y vigente hoy. */
+export function publicidadDe(t: Torneo, espacio: Espacio, hoy = hoyLocal()) {
+  const visibles = (t.anuncios ?? []).filter((a) => espacioDe(a) === espacio && a.estado === 'publicado' && vigencia(a, hoy) === 'vigente')
   return {
     oficial: visibles.find((a) => a.tipo === 'oficial'),
     regulares: visibles.filter((a) => a.tipo === 'regular').sort(porOrden),
   }
 }
 
-/** Todos los de una jornada, para el panel (los retirados al final). */
-export function anunciosDeJornada(t: Torneo, jornada: number) {
-  const lista = (t.anuncios ?? []).filter((a) => a.jornada === jornada)
+/** Todos los de un espacio, para el panel. */
+export function anunciosDe(t: Torneo, espacio: Espacio) {
+  const lista = (t.anuncios ?? []).filter((a) => espacioDe(a) === espacio)
   return {
     oficial: lista.find((a) => a.tipo === 'oficial' && a.estado !== 'retirado'),
     regulares: lista.filter((a) => a.tipo === 'regular').sort(porOrden),
@@ -81,7 +120,7 @@ function base() {
 
 /**
  * Cambia la lista de anuncios del torneo en una transacción. La transacción lee la versión más reciente del torneo:
- * si otro administrador asignó el patrocinador oficial de la misma jornada, Firestore la repite y la validación lo rechaza.
+ * si otro administrador asignó el patrocinador oficial del mismo espacio, Firestore la repite y la validación lo rechaza.
  */
 async function transaccion(torneoId: string, cambio: (anuncios: Anuncio[]) => Anuncio[], cobros?: Record<string, Cobro | null>) {
   await runTransaction(base(), async (tx) => {
@@ -104,25 +143,26 @@ async function transaccion(torneoId: string, cambio: (anuncios: Anuncio[]) => An
   })
 }
 
-/** Un solo patrocinador oficial (no retirado) por jornada. */
+/** Un solo patrocinador oficial (no retirado) por jornada o ronda. */
 export function validarOficiales(anuncios: Anuncio[]) {
-  const vistos = new Map<number, Anuncio>()
+  const vistos = new Map<Espacio, Anuncio>()
   for (const a of anuncios) {
     if (a.tipo !== 'oficial' || a.estado === 'retirado') continue
-    const otro = vistos.get(a.jornada)
-    if (otro) throw new ErrorValidacion(`La jornada ${a.jornada} ya tiene patrocinador oficial: ${otro.negocio}. Retíralo o cámbialo a regular.`)
-    vistos.set(a.jornada, a)
+    const e = espacioDe(a)
+    const otro = vistos.get(e)
+    if (otro) throw new ErrorValidacion(`${nombreEspacio(e)} ya tiene patrocinador oficial: ${otro.negocio}. Retíralo o cámbialo a regular.`)
+    vistos.set(e, a)
   }
 }
 
-/** Crea o reemplaza un anuncio y su cobro. El orden de un regular nuevo es el último de su jornada. */
+/** Crea o reemplaza un anuncio y su cobro. El orden de un regular nuevo es el último de su espacio. */
 export function guardarAnuncio(torneoId: string, anuncio: Anuncio, cobro: Cobro) {
   return transaccion(
     torneoId,
     (lista) => {
       const existe = lista.some((a) => a.id === anuncio.id)
       if (existe) return lista.map((a) => (a.id === anuncio.id ? limpiar(anuncio) : a))
-      const orden = Math.max(0, ...lista.filter((a) => a.jornada === anuncio.jornada && a.tipo === anuncio.tipo).map((a) => a.orden)) + 1
+      const orden = Math.max(0, ...lista.filter((a) => espacioDe(a) === espacioDe(anuncio) && a.tipo === anuncio.tipo).map((a) => a.orden)) + 1
       return [...lista, limpiar({ ...anuncio, orden })]
     },
     { [anuncio.id]: cobro },
@@ -138,12 +178,12 @@ export function borrarAnuncio(torneoId: string, id: string) {
   return transaccion(torneoId, (lista) => lista.filter((a) => a.id !== id), { [id]: null })
 }
 
-/** Sube o baja un anuncio regular dentro de su jornada; renumera para que el orden quede 1, 2, 3… */
+/** Sube o baja un anuncio regular dentro de su espacio; renumera para que el orden quede 1, 2, 3… */
 export function moverAnuncio(torneoId: string, id: string, paso: -1 | 1) {
   return transaccion(torneoId, (lista) => {
     const anuncio = lista.find((a) => a.id === id)
     if (!anuncio) return lista
-    const grupo = lista.filter((a) => a.jornada === anuncio.jornada && a.tipo === 'regular').sort(porOrden)
+    const grupo = lista.filter((a) => espacioDe(a) === espacioDe(anuncio) && a.tipo === 'regular').sort(porOrden)
     const i = grupo.findIndex((a) => a.id === id)
     const j = i + paso
     if (j < 0 || j >= grupo.length) return lista
